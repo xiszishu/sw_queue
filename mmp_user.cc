@@ -6,9 +6,10 @@
 #include <time.h>
 #include <deque>
 #include <iostream>
-#define SIZE 10000
+#include <Judy.h>
 #include "mmp_user.h"
 #include <mutex>
+#define SIZE 100000
 
 static int is_initialized = 0, initializing = 0, transferring = 0;
 //static buffer_t buffer;
@@ -17,18 +18,25 @@ static bool dirties[SIZE];
 static buffer_t fake;
 struct timespec tim, tim2;
 static std::mutex num_mutex;
+static pthread_mutex_t lock;
+
+Pvoid_t  PJLArray;//list for address hash
+Word_t *PValue;
+Word_t Index;
 
 void my_write(void *data, int len, void *location);
 void my_write_literal(void *d_data, int len, void *location); // The d_data "pointer" is actually the data, don't dereference or else!
 void *my_read(void *location);
 void my_xfer();
 void my_txend();
+void garbage_collector();
 
 static rt_mem_t glob_rt_mem = {
     .write = my_write,
     .write_literal = my_write_literal,
     .read = my_read,
     .do_transfer = my_xfer,
+    .gac=garbage_collector,
     .txend=my_txend
     //.check_self = my_check_self
 };
@@ -47,11 +55,6 @@ void internal_init()
         int r = __sync_bool_compare_and_swap(&initializing, 0, 1);
         if(r)
         {
-            //This thread updated initialization var, so continue with idxs
-            //buffer.read_idx = 0;
-            //buffer.write_idx = 0;
-            //buffer.and_seed = WRITE_BUFFER_SIZE - 1;
-            //initializxe the fake
             fake.ele.data=NULL;
             fake.ele.write_to=NULL;
             fake.ele.len=0;
@@ -62,8 +65,9 @@ void internal_init()
             tim.tv_nsec = 10;
 
             is_initialized = 1;
-
         }
+        PJLArray= (Pvoid_t) NULL;
+        memset(dirties,0,sizeof(dirties));
         //std::cout<<cmtq.size()<<std::endl;
     }
 }
@@ -103,6 +107,7 @@ void my_write(void *data, int len, void *location)
 /*
  * data doesn't actually point to a value. Instead, the pointer of data is the actual value and continues for len.
  */
+
 void my_write_literal(void *data, int len, void *location)
 {
   int wIdx, r;
@@ -119,20 +124,27 @@ void my_write_literal(void *data, int len, void *location)
 
   num_mutex.lock();
   cmtq.push_back(fake);
+  //num_mutex.unlock();
+  std::deque<buffer_t>::iterator it1=cmtq.end()-1;
   num_mutex.unlock();
-  std::deque<buffer_t>::iterator it=cmtq.end()-1;
 
+  //__sync_bool_compare_and_swap(&transferring, 1, 0);
   //temp=&cmtq.back();
   //write_t *ele = &buffer.elements[wIdx];
   //ele->write_to = location;
   //ele->direct_val = 1;
-  it->ele.write_to=location;
-  it->txid=glob_rt_mem.curtxid;
+  it1->ele.write_to=location;
+  it1->txid=glob_rt_mem.curtxid;
+
   //temp->ele.data=data;
-  memcpy(&(it->ele.data), &data, len); // Treat the void pointer as a literal value
+  memcpy(&(it1->ele.data), data, len); // Treat the void pointer as a literal value
 
   // For reads to know if this value hasn't been moved to NVRAM yet
   dirty_idx = hash_addr((long) location);
+
+  //JLI(PValue,PJLArray,location);
+  //*PValue= &(it1->ele.data);
+
   r = __sync_fetch_and_add(&(dirties[dirty_idx]), 1);
   while(!r)
   {
@@ -146,38 +158,70 @@ void my_write_literal(void *data, int len, void *location)
   //std::cout<<"add"<<cmtq.size()<<std::endl;
   //std::cout<<"add"<<cmtq.front().ele.len<<std::endl;
   //std::cout<<"**********"<<std::endl;
-  it->ele.len = len;
+  it1->ele.len = len;
+
 }
 
 void *my_read(void *location)
 {
     int dirty_idx = hash_addr((long) location);
+    void *p;
+
+    //***********optimization of Judy***************
+    // JLL(PValue,PJLArray,location);
+    // if (PValue!=NULL)
+    //     return (void *)(*PValue);
+    // else
+    //     return location;
+
+    //****************
+
+    //printf("Here\n");
+    //while (dirties[dirty_idx]);
+    //num_mutex.lock();
     if(dirties[dirty_idx])
     {
         //value is in the buffer
         //Wait for the data to transfer
-        my_xfer();
+        #ifdef OR
+        num_mutex.lock();
+        if (cmtq.empty())
+        {
+            num_mutex.unlock();
+            goto functionend;
+        }
+        std::deque<buffer_t>::iterator it=cmtq.end()-1;
+        //printf("%p %p\n",it->ele.write_to,location);
+        //printf("******************\n");
+        while ((it->ele.write_to!=location)&&(it!=cmtq.begin()))
+        {
+            //printf("%d %d\n",cmtq.size(),cmtq.empty());
+            //printf("%p %p\n",it->ele.write_to,location);
+            it--;
+        }
+        if (it->ele.write_to!=location)
+        {
+            //std::cout<<"find it"<<std::endl;
+            num_mutex.unlock();
+            return (void *) location;
+        }
+        //printf("%p %p\n",it->ele.write_to,location);
+        //num_mutex.lock();
+        p=(void *)malloc(it->ele.len);
+        //memcpy();
+        memcpy(p,&it->ele.data,it->ele.len);
+        num_mutex.unlock();
+        //printf("done!\n");
+        return p;
+        #else
+        //my_xfer();
+        //znum_mutex.unlock();
+        #endif
     }
 
+functionend:
     return (void *) location;
 }
-
-// void my_check_self()
-// {
-
-// 	//  If the buffer indexes have surpassed the buffer size, do a quick fix to put it back
-// 	if(buffer.write_idx >= WRITE_BUFFER_SIZE) {
-// 		__sync_fetch_and_and(&(buffer.write_idx), buffer.and_seed);
-// 	}
-// }
-
-// inline void inline_check_self() {
-
-// 	//  If the buffer indexes have surpassed the buffer size, do a quick fix to put it back
-// 	if(buffer.write_idx >= WRITE_BUFFER_SIZE) {
-// 		__sync_fetch_and_and(&(buffer.write_idx), buffer.and_seed);
-// 	}
-// }
 
 void my_xfer()
 {
@@ -185,47 +229,9 @@ void my_xfer()
     long dirty_idx;
     write_t *to_write;
     buffer_t *beg;
-    std::deque<buffer_t>::iterator it=cmtq.begin();
 
-    if(transferring)
-    {
-        //Another thread is already transferring, just wait for it to finish and return
-        goto wait_for_finish;
-    }
-
-    r = __sync_bool_compare_and_swap(&transferring, 0, 1);
-    //printf("this r:%d\n",r);
-    if(!r)
-    {
-        //Another thread is already transferring, just wait for it to finish and return
-        goto wait_for_finish;
-    }
-
-    //std::cout<<"transfer:"<<cmtq.size()<<" "<<cmtq.empty()<<std::endl;
-    //std::cout<<it->txid<<" "<<it->ele.len<<" "<<glob_rt_mem.curtxid<<std::endl;
-    //if (!cmtq.empty()) return;
-
-    //if (cmtq.empty()) return;
-    //std::cout<<"transfer:"<<cmtq.size()<<" "<<cmtq.empty()<<std::endl;
-    //std::cout<<it->txid<<" "<<it->ele.len<<" "<<glob_rt_mem.curtxid<<std::endl;
-
-    // it=cmtq.begin();
-    // num_mutex.lock();
-    // while (it!=cmtq.end())
-    // {
-    //     std::cout<<"TXID:"<<it->txid<<std::endl;
-    //     it++;
-    // }
-    // if (it==cmtq.end()) return;
-    // num_mutex.unlock();
-
-    it=cmtq.begin();
-    //std::cout<<"here:"<<it->txid<<" "<<glob_rt_mem.curtxid<<" "<<(long) it->ele.data<<std::endl;
-    //if (it->txid < glob_rt_mem.curtxid) printf("what the fuck!\n");
-    //num_mutex.lock();
-    nowtx=glob_rt_mem.curtxid;
-    while ((it!=cmtq.end())&&(it->txid < nowtx))
-    //while (!cmtq.empty())
+    num_mutex.lock();
+    while (!cmtq.empty())
     {
         //beg=&cmtq.front();
         //if (it->txid < 0)
@@ -234,7 +240,7 @@ void my_xfer()
         //    break;
         //}
         //it=cmtq.begin();
-        while (it->ele.len==-1)
+        while (cmtq.begin()->ele.len==-1)
         {
             //std::cout<<"stuck"<<cmtq.size()<<std::endl;
             //std::cout<<"stuck"<<cmtq.front().ele.len<<std::endl;
@@ -248,18 +254,20 @@ void my_xfer()
         //{
         //std::cout<<cmtq.size()<<std::endl;
         //printf("%p %d %d\n",beg->ele.write_to,beg->ele.data,beg->ele.len);
-        memcpy(it->ele.write_to, &(it->ele.data), it->ele.len);
+        memcpy(cmtq.begin()->ele.write_to, &(cmtq.begin()->ele.data), cmtq.begin()->ele.len);
         //}
-        dirty_idx = hash_addr((long) it->ele.write_to);
+        dirty_idx = hash_addr((long) cmtq.begin()->ele.write_to);
         r = __sync_fetch_and_sub(&(dirties[dirty_idx]), 1);
 
-        it->cmt=1;
-        //printf("");
+        //it->cmt=1;
+        cmtq.pop_front();
+        //printf("transfering\n");
         //std::cout<<"here:"<<it->txid<<" "<<glob_rt_mem.curtxid<<" "<<cmtq.size()<<" "<<nowtx<<std::endl;
         //std::cout<<"number:"<<(long)(it->ele.data)<<std::endl;
         //std::cout<<"segfault"<<std::endl;
         //num_mutex.lock();
-        ++it;
+        //++it;
+        //if (it==cmtq.end()) return;
         //num_mutex.unlock();
         //if (it==cmtq.end()) break;
         //goto outofloop;
@@ -270,65 +278,29 @@ void my_xfer()
         //num_mutex.unlock();
         //std::cout<<"size"<<cmtq.size()<<std::endl;
     }
-    //num_mutex.unlock();
-
- outofloop:
-    num_mutex.lock();
-   while ((!cmtq.empty())&&(cmtq.begin()->cmt))
-   {
-       cmtq.pop_front();
-       //std::cout<<"pop"<<std::endl;
-   }
-   num_mutex.unlock();
-  // while(buffer.read_idx != (buffer.write_idx & buffer.and_seed))
-  // {
-  //   i = buffer.read_idx;
-
-  //   to_write = &(buffer.elements[i]);
-
-  //   // Len is written to last and used here as a "ready" flag
-	// 	while(to_write->len == 0)
-  //   {
-  //     //if(buffer.read_idx == buffer.write_idx & buffer.and_seed) {
-  //       //goto xfer_quit;
-  //     //}
-	// 		//	Write index has been moved up, but the data isn't ready yet. Sleep a tad to give the other thread time
-	// 		nanosleep(&tim, &tim2); // 10 nanosecs?
-	// 	}
-
-  //   if(to_write->direct_val == 1) {
-	// 		//	Treat the value stored in the pointer as literal
-  //     memcpy(to_write->write_to, &(to_write->data), to_write->len);
-  //   } else {
-	// 		// Not literal, do a copy like the data is an actual pointer
-  //     memcpy(to_write->write_to, to_write->data, to_write->len);
-  //   }
-
-	// 	//	Cleanup
-	// 	to_write->direct_val = 0;
-	// 	to_write->len = 0;
-  //   dirty_idx = hash_addr((long) to_write->write_to);
-  //   r = __sync_fetch_and_sub(&(buffer.dirties[dirty_idx]), 1);
-
-  //   buffer.read_idx = buffer.read_idx + 1;
-  //   if(buffer.read_idx >= WRITE_BUFFER_SIZE) {
-  //     buffer.read_idx = buffer.read_idx & buffer.and_seed;
-  //   }
-  // }
-
-xfer_quit:
-  // no need for atomic here because there is only 1 thread doing this at a time
-  transferring = 0;
-  //__sync_bool_compare_and_swap(&transferring, 1, 0);
-  return;
-
-wait_for_finish:
-  while(transferring) {
-    nanosleep(&tim, &tim2);
-  }
+    num_mutex.unlock();
   return;
 }
+void garbage_collector()
+{
+    int r;
+    while(transferring)
+    {
+        nanosleep(&tim, &tim2);
+    }
+    r = __sync_bool_compare_and_swap(&transferring, 0, 1);
+    //num_mutex.lock();
+    while ((!cmtq.empty())&&(cmtq.begin()->cmt))
+    {
+        cmtq.pop_front();
+        //std::cout<<"pop"<<std::endl;
+    }
+    __sync_bool_compare_and_swap(&transferring, 1, 0);
 
+    //num_mutex.unlock();
+
+    return;
+}
 rt_mem_t *get_rt_mem()
 {
     if(!is_initialized)

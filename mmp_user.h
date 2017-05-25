@@ -15,6 +15,7 @@ struct rt_mem_t {
     void (*write_literal)(void *d_data, int len, void *location); // The d_data "pointer" is actually the data, don't dereference or else!
     void *(*read)(void *location);
     void (*do_transfer)(void);
+    void (*gac)(void);
     void (*txend)(void);
 
     //void (*check_self)(void);

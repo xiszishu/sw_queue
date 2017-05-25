@@ -4,17 +4,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "mmp_user.h"
 #include "mmp_init.h"
+#include "lat.h"
 
-#define VEC_SZ 65536
+#define VEC_SZ 5000//65536
 
 int main(int argc, char *argv[])
 {
   void *a_p, *b_p, *c_p;
   long *a, *b, *c, a_val, b_val;
-  int i, j;
+  int i, j, temp;
   rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 
 
@@ -27,15 +30,21 @@ int main(int argc, char *argv[])
   c = (long *) c_p;
 
   // Outer for loop is just to increase computation time
-  for(j = 0; j < 10; j++)
+  timer_begin=GetWallTime();
+
+  for(j = 0; j < 100; j++)
   {
 
       // Initialize a & b
       for(i = 0; i < VEC_SZ; i++)
       {
           rt_mem->txend();
-          rt_mem->write_literal((void *) ((long) i), sizeof(long), &a[i]);
-          rt_mem->write_literal((void *) ((long) i + VEC_SZ), sizeof(long), &b[i]);
+          temp=i;
+          rt_mem->write_literal(&temp, sizeof(long), &a[i]);
+          //emulate_latency_ns_fence(200);
+          temp=i+VEC_SZ;
+          rt_mem->write_literal(&temp, sizeof(long), &b[i]);
+          //emulate_latency_ns_fence(200);
       }
 
       //c = a + b;
@@ -43,8 +52,13 @@ int main(int argc, char *argv[])
       {
          rt_mem->txend();
          a_val = *((long *) rt_mem->read(&a[i]));
+         //a_val=a[i];
+         //emulate_latency_ns_fence(200);
          b_val = *((long *) rt_mem->read(&b[i]));
-         rt_mem->write_literal((void *) ((long) a_val + b_val), sizeof(long), &c[i]);
+         //b_val=b[i];
+         temp=a_val+b_val;
+         rt_mem->write_literal(&temp, sizeof(long), &c[i]);
+         //emulate_latency_ns_fence(200);
       }
 
       printf("Finished computation for j = %d\n", j);
@@ -53,12 +67,16 @@ int main(int argc, char *argv[])
 
   pthread_join(rt_mem->th1, NULL);
 
-  for (i=0;i<VEC_SZ;i++)
-  {
-      printf("%ld\n",*((long *) rt_mem->read(&a[i])));
-      printf("%ld\n", *((long *) rt_mem->read(&b[i])));
-      printf("%ld\n", *((long *) rt_mem->read(&c[i])));
-  }
+  timer_end=GetWallTime();
+  sum+=timer_end-timer_begin;
+
+  printf("time: %.15lf\n",sum);
+  // for (i=0;i<VEC_SZ;i++)
+  // {
+  //     printf("%ld\n",*((long *) rt_mem->read(&a[i])));
+  //     printf("%ld\n", *((long *) rt_mem->read(&b[i])));
+  //     printf("%ld\n", *((long *) rt_mem->read(&c[i])));
+  // }
   munmap(a_p,VEC_SZ * sizeof(long));
   munmap(b_p,VEC_SZ * sizeof(long));
   munmap(c_p,VEC_SZ * sizeof(long));

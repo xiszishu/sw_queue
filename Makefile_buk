@@ -1,0 +1,6 @@
+CC := g++
+FILE :=input
+all:
+	$(CC) hash.cc -o hash
+input:
+	$(CC) input.cc -o input

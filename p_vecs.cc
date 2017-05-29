@@ -8,8 +8,9 @@
 #include "lat.h"
 #include <queue>
 #define VEC_SZ 65536
+#define LOGSIZE 1000000
 
-typedef std::pair <int, int> dual;
+typedef std::pair <long*, int> dual;
 dual log[1000000];
 int numa;
 
@@ -34,17 +35,19 @@ int main(int argc, char *argv[]) {
     {
         //log_s.push(dual(i,i+VEC_SZ));
         //emulate_latency_ns_fence(40000);
-        log[numa++]=std::make_pair(i,i+VEC_SZ);
+        ++numa%=LOGSIZE;
+        log[numa]=std::make_pair(&a[i],i+VEC_SZ);
         memcpy(&a[i],&log[numa-1],sizeof(int));
-        emulate_latency_ns_fence(20000);
+        emulate_latency_ns_fence(2000);
         //a[i] = i;
         //emulate_latency_ns_fence(20000);
         //log_s.push(dual(i,i+VEC_SZ));
         //emulate_latency_ns_fence(40000);
-        log[numa++]=std::make_pair(i,i+VEC_SZ);
+        ++numa%=LOGSIZE;
+        log[numa]=std::make_pair(&b[i],i+VEC_SZ);
         //b[i] = i + VEC_SZ;
         memcpy(&b[i],&log[numa-1],sizeof(int));
-        emulate_latency_ns_fence(20000);
+        emulate_latency_ns_fence(2000);
     }
 
     for(i = 0; i < VEC_SZ; i++) {
@@ -52,12 +55,13 @@ int main(int argc, char *argv[]) {
       b_val = b[i];
       //log_s.push(dual(i,i+VEC_SZ));
       //emulate_latency_ns_fence(40000);
-      log[numa++]=std::make_pair(i,a_val+b_val);
-      emulate_latency_ns_fence(40000);
+      ++numa%=LOGSIZE;
+      log[numa]=std::make_pair(&c[i],a_val+b_val);
+      emulate_latency_ns_fence(2000);
       memcpy(&c[i],&log[numa-1],sizeof(int));
       //c[i] = a_val + b_val;
       //emulate_latency_ns_fence(20000);
-      emulate_latency_ns_fence(20000);
+      emulate_latency_ns_fence(2000);
     }
 
     printf("Finished computation for j = %d\n", j);

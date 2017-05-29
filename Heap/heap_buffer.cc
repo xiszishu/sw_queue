@@ -6,7 +6,10 @@
 #include "../mmp_user.h"
 #include "../mmp_init.h"
 #include "../lat.h"
+
 #define LOGSIZE 1000000
+
+rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 
 struct DataItem
 {
@@ -30,39 +33,45 @@ void init()
 void insert(DataItem ele)
 {
     int i;
+    DataItem a;
     h[++heapsize]=ele;
     i=heapsize;
-    while (h[i/2].key>ele.key)
+    a=  *((DataItem *) rt_mem->read(&h[i/2]));
+    while (a.key>ele.key)
     {
-        h[i]=h[i/2];
+        //h[i]=h[i/2];
+        rt_mem->write_literal(&a, sizeof(long), &h[i]);
         i/=2;
+        a=  *((DataItem *) rt_mem->read(&h[i/2]));
     }
-    h[i]=ele;
-    ++numa%=LOGSIZE;
-    log[numa]=std::make_pair(&h[i],ele);
+    //h[i]=ele;
+    rt_mem->write_literal(&ele,sizeof(DataItem), &h[i]);
 }
 DataItem Delete()
 {
     int i,j;
+    DataItem a,b;
     DataItem minEle=h[1],nowEle=h[heapsize];
     heapsize--;
     for (i=1;i*2<=heapsize;i=j)
     {
         j=i*2;
-        if (j!=heapsize && h[j+1].key>h[j].key)
+        a=  *((DataItem *) rt_mem->read(&h[j]));
+        b=  *((DataItem *) rt_mem->read(&h[j+1]));
+        if ((j!=heapsize)&&(b.key>a.key))
         {
             j++;
+            a=b;
         }
-        if (nowEle.key>h[j].key)
+        if (nowEle.key>a.key)
         {
-            h[i]=h[j];
+            //h[i]=h[j];
+            rt_mem->write_literal(&h[j], sizeof(long), &h[i]);
         }
         else break;
     }
-    h[j]=nowEle;
-
-    ++numa%=LOGSIZE;
-    log[numa]=std::make_pair(&h[j],nowEle);
+    //h[j]=nowEle;
+    rt_mem->write_literal(&nowEle, sizeof(long), &h[j]);
 
     return minEle;
 }
@@ -97,9 +106,11 @@ int main()
             insert(temp);
         }
     }
+    rt_mem->appfinish=1;
+    pthread_join(rt_mem->th1, NULL);
     timer_end=GetWallTime();
     sum+=timer_end-timer_begin;
     printf("time: %.15lf\n",sum);
-    
+
     return 0;
 }

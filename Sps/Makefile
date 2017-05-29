@@ -14,4 +14,4 @@ buffer:
 #	gcc -O0 -g thread_base.c -o xthread_base -lpthread
 
 clean:
-	$(RM) sps
+	$(RM) sps sps_buffer

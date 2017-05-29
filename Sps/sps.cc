@@ -20,14 +20,14 @@
 #include "../mmp_init.h"
 #define VEC_SZ 65536
 #define ITEM_COUNT 1000000
-#define SIZE 1000000
+#define LOGSIZE 1000000
 
 using namespace std;
 
 //typedef mystring ch[256];
 typedef pair <int, long> Int_Pair;
 typedef std::pair <int, int> dual;
-dual log[SIZE];
+dual log[LOGSIZE];
 int numa;
 
 double timer_begin,timer_end,sum;
@@ -89,11 +89,9 @@ void array_swap(vector<long>& a, map<int, long>& undolog, map<int, long>& redolo
   //mcsim_log_end();
   //mcsim_mem_fence(); // clflush+fence
   //temp  = a[k1];
-  numa++;
-  numa%=SIZE;
+  ++numa%=LOGSIZE;
   log[numa]=std::make_pair(k1,a[k1]);
-  numa++;
-  numa%=SIZE;
+  ++numa%=LOGSIZE;
   log[numa]=std::make_pair(k2,a[k2]);
   
   temp=a[k1];
@@ -121,30 +119,10 @@ void print_array(vector<long>& a, int n, ofstream& file)
 
 int main(int argc, char **argv)
 {
-  //mcsim_skip_instrs_begin();
-  if (argc == 1) {
-    printf("\n=========== An Array Usage ============\n");
-    printf("Build an array with random integers, randomly swaps between entries\n");
-    printf("./sps --count <item_count> --swaps <num of swaps>\n");
-    printf("<item_count>, default 10^6\n\n");
-    return 0;
-  }
-
-  int i;
-  int item_count = ITEM_COUNT, swaps = 0;
-
-  for (i = 1; i < argc; i++) {
-    if (strncmp(argv[i], "--count", 7) == 0) {
-      item_count = atoi(argv[i+1]);
-      ++i;
-    } else if (strncmp(argv[i], "--swaps", 7) == 0) {
-      swaps = atoi(argv[i+1]);
-      ++i;
-    } else {
-      printf("Invalid parameters: '%s'\n", argv[i]);
-      return -1;
-    }
-  }
+    int i,swaps,item_count;
+    std::ifstream file1;
+    file1.open("sps.txt");
+    file1>>item_count>>swaps;
 
   vector<long> array(item_count);
   map<int, long> undolog, redolog;

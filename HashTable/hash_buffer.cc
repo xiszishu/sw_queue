@@ -8,6 +8,7 @@
 #include <fstream>
 #include "../mmp_user.h"
 #include "../mmp_init.h"
+#include "../lat.h"
 
 #define SIZE 100
 
@@ -19,8 +20,6 @@ struct DataItem
 
 typedef struct DataItem DataItem;
 int ops,hashtable_size;
-
-double timer_begin,timer_end,sum;
 rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 
 DataItem* hashArray;
@@ -144,7 +143,8 @@ int main()
     dummyItem.key = -1;
 
     buildH();
-    display();
+    //display();
+    timer_begin=GetWallTime();
     for (i=1;i<=ops;i++)
     {
         temp.key=rand()%(hashtable_size);
@@ -160,9 +160,11 @@ int main()
             deleteH(it);
         }
     }
-
     rt_mem->appfinish=1;
-   display();
+    timer_end=GetWallTime();
+    sum+=timer_end-timer_begin;
+    printf("time: %.15lf\n",sum);
+    //display();
 
    return 0;
 }

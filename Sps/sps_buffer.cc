@@ -111,31 +111,11 @@ void print_array(vector<long>& a, int n, ofstream& file)
 
 int main(int argc, char **argv)
 {
-  //mcsim_skip_instrs_begin();
-  if (argc == 1) {
-    printf("\n=========== An Array Usage ============\n");
-    printf("Build an array with random integers, randomly swaps between entries\n");
-    printf("./sps --count <item_count> --swaps <num of swaps>\n");
-    printf("<item_count>, default 10^6\n\n");
-    return 0;
-  }
-
-  int i;
-  int item_count = ITEM_COUNT, swaps = 0;
-
-  for (i = 1; i < argc; i++) {
-    if (strncmp(argv[i], "--count", 7) == 0) {
-      item_count = atoi(argv[i+1]);
-      ++i;
-    } else if (strncmp(argv[i], "--swaps", 7) == 0) {
-      swaps = atoi(argv[i+1]);
-      ++i;
-    } else {
-      printf("Invalid parameters: '%s'\n", argv[i]);
-      return -1;
-    }
-  }
-
+    int i,swaps,item_count;
+    std::ifstream file1;
+    file1.open("sps.txt");
+    file1>>item_count>>swaps;
+    
   vector<long> array(item_count);
   map<int, long> undolog, redolog;
 

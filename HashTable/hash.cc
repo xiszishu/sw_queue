@@ -8,9 +8,10 @@
 #include <fstream>
 #include "../mmp_user.h"
 #include "../mmp_init.h"
+#include "../lat.h"
 
 #define SIZE 100
-
+#define LOGSIZE 1000000
 struct DataItem
 {
     int data;
@@ -19,12 +20,11 @@ struct DataItem
 
 typedef struct DataItem DataItem;
 typedef std::pair <DataItem*, DataItem> dual;
-dual log[1000000];
+dual log[LOGSIZE];
 int numa;
 
 int ops,hashtable_size;
 
-double timer_begin,timer_end,sum;
 rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 
 DataItem* hashArray;
@@ -55,7 +55,7 @@ DataItem *search(int key)
 
 void insertH(DataItem temp)
 {
-   //struct DataItem item = (struct DataItem*) malloc(sizeof(struct DataItem));
+    //struct DataItem item = (struct DataItem*) malloc(sizeof(struct DataItem));
     DataItem *it;
     int i,hashIndex = hashCode(temp.key);
     //i=hashIndex;
@@ -70,7 +70,8 @@ void insertH(DataItem temp)
     }
     hashArray[i].data=temp.data;
     hashArray[i].key=temp.key;
-    log[numa++]=std::make_pair(&hashArray[i],temp);
+    ++numa%=LOGSIZE;
+    log[numa]=std::make_pair(&hashArray[i],temp);
 
     //rt_mem->write_literal(&temp, sizeof(DataItem), &hashArray[i]);
     //item->data = data;
@@ -98,10 +99,10 @@ void deleteH(DataItem* item)
    //struct DataItem temp = *item;
    //assign a dummy item at deleted position
    *item = dummyItem;
-   log[numa++]=std::make_pair(item,dummyItem);
+   ++numa%=LOGSIZE;
+   log[numa]=std::make_pair(item,dummyItem);
    //rt_mem->write_literal(&dummyItem, sizeof(DataItem), item);
    return ;
-
 }
 
 void display()
@@ -144,7 +145,9 @@ int main()
     numa=0;
 
     buildH();
-    display();
+    //display();
+    timer_begin=GetWallTime();
+
     for (i=1;i<=ops;i++)
     {
         temp.key=rand()%(hashtable_size);
@@ -162,7 +165,9 @@ int main()
     }
 
     rt_mem->appfinish=1;
-   display();
-
-   return 0;
+    timer_end=GetWallTime();
+    sum+=timer_end-timer_begin;
+    printf("time: %.15lf\n",sum);
+    //display();
+    return 0;
 }

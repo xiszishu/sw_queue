@@ -41,10 +41,10 @@ int main(int argc, char *argv[])
           rt_mem->txend();
           temp=i;
           rt_mem->write_literal(&temp, sizeof(long), &a[i]);
-          //emulate_latency_ns_fence(200);
+          //emulate_latency_ns_fence(2000);
           temp=i+VEC_SZ;
           rt_mem->write_literal(&temp, sizeof(long), &b[i]);
-          //emulate_latency_ns_fence(200);
+          //emulate_latency_ns_fence(2000);
       }
 
       //c = a + b;
@@ -53,12 +53,12 @@ int main(int argc, char *argv[])
          rt_mem->txend();
          a_val = *((long *) rt_mem->read(&a[i]));
          //a_val=a[i];
-         //emulate_latency_ns_fence(200);
+         //emulate_latency_ns_fence(2000);
          b_val = *((long *) rt_mem->read(&b[i]));
          //b_val=b[i];
          temp=a_val+b_val;
          rt_mem->write_literal(&temp, sizeof(long), &c[i]);
-         //emulate_latency_ns_fence(200);
+         // emulate_latency_ns_fence(2000);
       }
 
       printf("Finished computation for j = %d\n", j);

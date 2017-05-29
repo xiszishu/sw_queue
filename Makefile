@@ -12,11 +12,15 @@ lat_buffer:
 base:
 	g++ -std=c++11 -g base_vecs.cc -o xvecs_base
 
+base_log:
+	g++ -std=c++11 -g p_vecs.cc -o log_base
+
 sps:
 	g++ -std=c++11 -g -D$(DFLAG) -pthread mmp_init.cc mmp_thread.cc mmp_user.cc sps.cc -o sps
 
 hashtable:
 	g++ -std=c++11 -g -D$(DFLAG) -pthread mmp_init.cc mmp_thread.cc mmp_user.cc hash.cc -o hashtable
+
 #thread_buffer:
 #	gcc -O0 -g thread_buffer.c mmp_user.c mmp_init.c mmp_thread.c -o xthread_buff -lpthread
 

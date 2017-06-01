@@ -122,11 +122,11 @@ void my_write_literal(void *data, int len, void *location)
   //std::cout<<cmtq.size()<<std::endl;
   while (cmtq.size()>=SIZE);
 
-  num_mutex.lock();
+  //num_mutex.lock();
   cmtq.push_back(fake);
   //num_mutex.unlock();
   std::deque<buffer_t>::iterator it1=cmtq.end()-1;
-  num_mutex.unlock();
+  //num_mutex.unlock();
 
   //__sync_bool_compare_and_swap(&transferring, 1, 0);
   //temp=&cmtq.back();
@@ -140,10 +140,10 @@ void my_write_literal(void *data, int len, void *location)
   memcpy(&(it1->ele.data), data, len); // Treat the void pointer as a literal value
 
   // For reads to know if this value hasn't been moved to NVRAM yet
-  dirty_idx = hash_addr((long) location);
+  //dirty_idx = hash_addr((long) location);
 
-  //JLI(PValue,PJLArray,location);
-  //*PValue= &(it1->ele.data);
+  JLI(PValue,PJLArray,location);
+  *PValue= &(it1->ele.data);
 
   r = __sync_fetch_and_add(&(dirties[dirty_idx]), 1);
   while(!r)
@@ -166,58 +166,59 @@ void *my_read(void *location)
 {
     int dirty_idx = hash_addr((long) location);
     void *p;
+    Word_t Index=location;
 
     //***********optimization of Judy***************
-    // JLL(PValue,PJLArray,location);
-    // if (PValue!=NULL)
-    //     return (void *)(*PValue);
-    // else
-    //     return location;
+    JLL(PValue,PJLArray,Index);
+    if (PValue!=NULL)
+        return (void *)(*PValue);
+    else
+        return location;
 
     //****************
 
     //printf("Here\n");
     //while (dirties[dirty_idx]);
     //num_mutex.lock();
-    if(dirties[dirty_idx])
-    {
-        //value is in the buffer
-        //Wait for the data to transfer
-        #ifdef OR
-        num_mutex.lock();
-        if (cmtq.empty())
-        {
-            num_mutex.unlock();
-            goto functionend;
-        }
-        std::deque<buffer_t>::iterator it=cmtq.end()-1;
-        //printf("%p %p\n",it->ele.write_to,location);
-        //printf("******************\n");
-        while ((it->ele.write_to!=location)&&(it!=cmtq.begin()))
-        {
-            //printf("%d %d\n",cmtq.size(),cmtq.empty());
-            //printf("%p %p\n",it->ele.write_to,location);
-            it--;
-        }
-        if (it->ele.write_to!=location)
-        {
-            //std::cout<<"find it"<<std::endl;
-            num_mutex.unlock();
-            return (void *) location;
-        }
-        //printf("%p %p\n",it->ele.write_to,location);
-        //num_mutex.lock();
-        p=(void *)malloc(it->ele.len);
-        //memcpy();
-        memcpy(p,&it->ele.data,it->ele.len);
-        num_mutex.unlock();
-        //printf("done!\n");
-        return p;
-        #else
-        //my_xfer();
-        //znum_mutex.unlock();
-        #endif
-    }
+    // if(dirties[dirty_idx])
+    // {
+    //     //value is in the buffer
+    //     //Wait for the data to transfer
+    //     #ifdef OR
+    //     //num_mutex.lock();
+    //     if (cmtq.empty())
+    //     {
+    //         num_mutex.unlock();
+    //         goto functionend;
+    //     }
+    //     std::deque<buffer_t>::iterator it=cmtq.end()-1;
+    //     //printf("%p %p\n",it->ele.write_to,location);
+    //     //printf("******************\n");
+    //     while ((it->ele.write_to!=location)&&(it!=cmtq.begin()))
+    //     {
+    //         //printf("%d %d\n",cmtq.size(),cmtq.empty());
+    //         //printf("%p %p\n",it->ele.write_to,location);
+    //         it--;
+    //     }
+    //     if (it->ele.write_to!=location)
+    //     {
+    //         //std::cout<<"find it"<<std::endl;
+    //         //num_mutex.unlock();
+    //         return (void *) location;
+    //     }
+    //     //printf("%p %p\n",it->ele.write_to,location);
+    //     //num_mutex.lock();
+    //     //p=(void *)malloc(it->ele.len);
+    //     //memcpy();
+    //     //memcpy(p,&it->ele.data,it->ele.len);
+    //     //num_mutex.unlock();
+    //     //printf("done!\n");
+    //     return &it->ele.data;
+    //     #else
+    //     //my_xfer();
+    //     //znum_mutex.unlock();
+    //     #endif
+    // }
 
 functionend:
     return (void *) location;
@@ -230,56 +231,20 @@ void my_xfer()
     write_t *to_write;
     buffer_t *beg;
 
-    num_mutex.lock();
     while (!cmtq.empty())
     {
-        //beg=&cmtq.front();
-        //if (it->txid < 0)
-        //{
-        //    printf("txid:%d %p\n",it->txid,it);
-        //    break;
-        //}
-        //it=cmtq.begin();
         while (cmtq.begin()->ele.len==-1)
         {
-            //std::cout<<"stuck"<<cmtq.size()<<std::endl;
-            //std::cout<<"stuck"<<cmtq.front().ele.len<<std::endl;
             nanosleep(&tim, &tim2);
         }
-        //if (beg->ele.direcet_val==1)
-        //{
-        //    memcpy(beg->ele.write_to, &(beg->ele.data), beg->ele.len);
-        //}
-        //else
-        //{
-        //std::cout<<cmtq.size()<<std::endl;
-        //printf("%p %d %d\n",beg->ele.write_to,beg->ele.data,beg->ele.len);
         memcpy(cmtq.begin()->ele.write_to, &(cmtq.begin()->ele.data), cmtq.begin()->ele.len);
-        //}
         dirty_idx = hash_addr((long) cmtq.begin()->ele.write_to);
         r = __sync_fetch_and_sub(&(dirties[dirty_idx]), 1);
-
-        //it->cmt=1;
         cmtq.pop_front();
-        //printf("transfering\n");
-        //std::cout<<"here:"<<it->txid<<" "<<glob_rt_mem.curtxid<<" "<<cmtq.size()<<" "<<nowtx<<std::endl;
-        //std::cout<<"number:"<<(long)(it->ele.data)<<std::endl;
-        //std::cout<<"segfault"<<std::endl;
-        //num_mutex.lock();
-        //++it;
-        //if (it==cmtq.end()) return;
-        //num_mutex.unlock();
-        //if (it==cmtq.end()) break;
-        //goto outofloop;
-        //if (it->txid<0) printf("id:%d\n",it->txid);
-        //num_mutex.lock();
-        //std::cout<<cmtq.size()<<std::endl;
-        //cmtq.pop_front();
-        //num_mutex.unlock();
-        //std::cout<<"size"<<cmtq.size()<<std::endl;
     }
-    num_mutex.unlock();
-  return;
+    PJLArray= (Pvoid_t) NULL;
+    //num_mutex.unlock();
+    return;
 }
 void garbage_collector()
 {

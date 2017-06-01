@@ -2,12 +2,13 @@ RM     := /bin/rm -rf
 BOOST  :=-lboost_program_options -lboost_random
 DFLAG	 :=OR
 FP		 :=-fpermissive
+JUDY	 :=-lJudy
 
 buffer:
 	g++ -std=c++14 -g -pthread -fpermissive mmp_init.cc mmp_thread.cc mmp_user.cc vecs.cc -o xvecs_buffer
 
 lat_buffer:
-	g++ -std=c++14 -g -D$(DFLAG) -pthread mmp_init.cc mmp_thread.cc mmp_user.cc vecs.cc -o lat_buffer
+	g++ -std=c++14 -g -D$(DFLAG) $(FP) -pthread mmp_init.cc mmp_thread.cc mmp_user.cc vecs.cc -o lat_bufferc $(JUDY)
 
 base:
 	g++ -std=c++11 -g base_vecs.cc -o xvecs_base

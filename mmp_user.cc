@@ -143,13 +143,13 @@ void my_write_literal(void *data, int len, void *location)
   //dirty_idx = hash_addr((long) location);
 
   JLI(PValue,PJLArray,location);
-  *PValue= &(it1->ele.data);
+  *PValue= &(*it1);
 
-  r = __sync_fetch_and_add(&(dirties[dirty_idx]), 1);
-  while(!r)
-  {
-      r = __sync_fetch_and_add(&(dirties[dirty_idx]), 1);
-  }
+  // r = __sync_fetch_and_add(&(dirties[dirty_idx]), 1);
+  // while(!r)
+  // {
+  //     r = __sync_fetch_and_add(&(dirties[dirty_idx]), 1);
+  // }
   //if (len==-1)
   //std::cout<<"invalid"<<std::endl;
 
@@ -168,10 +168,14 @@ void *my_read(void *location)
     void *p;
     Word_t Index=location;
 
+
     //***********optimization of Judy***************
     JLL(PValue,PJLArray,Index);
     if (PValue!=NULL)
-        return (void *)(*PValue);
+    {
+        buffer_t *now=(buffer_t *)*PValue;
+        return (void *)&(now->ele.data);
+    }
     else
         return location;
 
@@ -229,19 +233,32 @@ void my_xfer()
     int i, r,nowtx;
     long dirty_idx;
     write_t *to_write;
-    buffer_t *beg;
+    buffer_t *now;
+    Word_t Index1;
 
-    while (!cmtq.empty())
+    Index1=0;
+    JLF(PValue,PJLArray, Index1);
+    //if (PValue!=NULL)
+    //    printf("%p %d\n",*PValue,*(int *)(*PValue));
+    while (PValue!=NULL)
     {
-        while (cmtq.begin()->ele.len==-1)
-        {
-            nanosleep(&tim, &tim2);
-        }
-        memcpy(cmtq.begin()->ele.write_to, &(cmtq.begin()->ele.data), cmtq.begin()->ele.len);
-        dirty_idx = hash_addr((long) cmtq.begin()->ele.write_to);
-        r = __sync_fetch_and_sub(&(dirties[dirty_idx]), 1);
-        cmtq.pop_front();
+        now=(buffer_t *)*PValue;
+        memcpy(now->ele.write_to,&(now->ele.data),now->ele.len);
+        JLN(PValue,PJLArray, Index1);
     }
+    cmtq.clear();
+    // while (!cmtq.empty())
+    // {
+    //     while (cmtq.begin()->ele.len==-1)
+    //     {
+    //         nanosleep(&tim, &tim2);
+    //     }
+    //     memcpy(cmtq.begin()->ele.write_to, &(cmtq.begin()->ele.data), cmtq.begin()->ele.len);
+    //     //dirty_idx = hash_addr((long) cmtq.begin()->ele.write_to);
+    //     //r = __sync_fetch_and_sub(&(dirties[dirty_idx]), 1);
+    //     cmtq.pop_front();
+    // }
+
     PJLArray= (Pvoid_t) NULL;
     //num_mutex.unlock();
     return;

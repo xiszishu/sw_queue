@@ -159,8 +159,9 @@ int main()
         {
             deleteH(it);
         }
+        //std::cout<<i<<std::endl;
     }
-    rt_mem->appfinish=1;
+    //rt_mem->appfinish=1;
     timer_end=GetWallTime();
     sum+=timer_end-timer_begin;
     printf("time: %.15lf\n",sum);

@@ -6,8 +6,6 @@
 #include <time.h>
 #include <iostream>
 #include <fstream>
-#include "../mmp_user.h"
-#include "../mmp_init.h"
 #include "../lat.h"
 
 #define SIZE 100
@@ -24,8 +22,6 @@ dual log[LOGSIZE];
 int numa;
 
 int ops,hashtable_size;
-
-rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 
 DataItem* hashArray;
 DataItem dummyItem;
@@ -163,8 +159,6 @@ int main()
             deleteH(it);
         }
     }
-
-    rt_mem->appfinish=1;
     timer_end=GetWallTime();
     sum+=timer_end-timer_begin;
     printf("time: %.15lf\n",sum);

@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
       //c = a + b;
       for(i = 0; i < VEC_SZ; i++)
       {
-          //rt_mem->txend();
+         //rt_mem->txend();
          a_val = *((long *) rt_mem->read(&a[i]));
          //a_val=a[i];
          //emulate_latency_ns_fence(2000);
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
          rt_mem->write_literal(&temp, sizeof(long), &c[i]);
          // emulate_latency_ns_fence(2000);
       }
-      rt_mem->do_transfer();
+      //rt_mem->do_transfer();
       printf("Finished computation for j = %d\n", j);
   }
 

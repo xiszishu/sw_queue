@@ -158,9 +158,9 @@ int main(int argc, char **argv)
   //cout << "dummy: undolog.size= " << undolog.size() << endl;
   //cout << "dummy: redolog.size= " << redolog.size() << endl;
   }
-  rt_mem->appfinish=1;
+  //rt_mem->appfinish=1;
 
-  pthread_join(rt_mem->th1, NULL);
+  //pthread_join(rt_mem->th1, NULL);
 
   printf("%.15lf\n",sum/batch);
   cout << "done swaps " << i << endl;

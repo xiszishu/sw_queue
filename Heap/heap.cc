@@ -3,8 +3,6 @@
 #include <time.h>
 #include <iostream>
 #include <fstream>
-#include "../mmp_user.h"
-#include "../mmp_init.h"
 #include "../lat.h"
 #define LOGSIZE 1000000
 
@@ -35,11 +33,14 @@ void insert(DataItem ele)
     while (h[i/2].key>ele.key)
     {
         h[i]=h[i/2];
+        emulate_latency_ns_fence(2000);
         i/=2;
     }
     h[i]=ele;
+    emulate_latency_ns_fence(2000);
     ++numa%=LOGSIZE;
     log[numa]=std::make_pair(&h[i],ele);
+    emulate_latency_ns_fence(2000);
 }
 DataItem Delete()
 {
@@ -56,13 +57,16 @@ DataItem Delete()
         if (nowEle.key>h[j].key)
         {
             h[i]=h[j];
+            emulate_latency_ns_fence(2000);
         }
         else break;
     }
     h[j]=nowEle;
+    emulate_latency_ns_fence(2000);
 
     ++numa%=LOGSIZE;
     log[numa]=std::make_pair(&h[j],nowEle);
+    emulate_latency_ns_fence(2000);
 
     return minEle;
 }

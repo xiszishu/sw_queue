@@ -29,14 +29,12 @@ void my_write_literal(void *d_data, int len, void *location); // The d_data "poi
 void *my_read(void *location);
 void my_xfer();
 void my_txend();
-void garbage_collector();
 
 static rt_mem_t glob_rt_mem = {
     .write = my_write,
     .write_literal = my_write_literal,
     .read = my_read,
     .do_transfer = my_xfer,
-    .gac=garbage_collector,
     .txend=my_txend
     //.check_self = my_check_self
 };
@@ -76,6 +74,42 @@ void my_txend()
     glob_rt_mem.curtxid++;
     return;
 }
+void my_xfer()
+{
+    int i, r,nowtx;
+    long dirty_idx;
+    write_t *to_write;
+    buffer_t *now;
+    Word_t Index1;
+
+    Index1=0;
+    JLF(PValue,PJLArray, Index1);
+    //if (PValue!=NULL)
+    //    printf("%p %d\n",*PValue,*(int *)(*PValue));
+    while (PValue!=NULL)
+    {
+        now=(buffer_t *)*PValue;
+        memcpy(now->ele.write_to,&(now->ele.data),now->ele.len);
+        JLN(PValue,PJLArray, Index1);
+    }
+    cmtq.clear();
+    // while (!cmtq.empty())
+    // {
+    //     while (cmtq.begin()->ele.len==-1)
+    //     {
+    //         nanosleep(&tim, &tim2);
+    //     }
+    //     memcpy(cmtq.begin()->ele.write_to, &(cmtq.begin()->ele.data), cmtq.begin()->ele.len);
+    //     //dirty_idx = hash_addr((long) cmtq.begin()->ele.write_to);
+    //     //r = __sync_fetch_and_sub(&(dirties[dirty_idx]), 1);
+    //     cmtq.pop_front();
+    // }
+
+    PJLArray= (Pvoid_t) NULL;
+    //num_mutex.unlock();
+    return;
+}
+
 void my_write(void *data, int len, void *location)
 {
   int wIdx, r;
@@ -120,7 +154,7 @@ void my_write_literal(void *data, int len, void *location)
   //  wIdx = wIdx & buffer.and_seed;
  // }
   //std::cout<<cmtq.size()<<std::endl;
-  while (cmtq.size()>=SIZE);
+  if (cmtq.size()>=SIZE) my_xfer();
 
   //num_mutex.lock();
   cmtq.push_back(fake);
@@ -228,61 +262,6 @@ functionend:
     return (void *) location;
 }
 
-void my_xfer()
-{
-    int i, r,nowtx;
-    long dirty_idx;
-    write_t *to_write;
-    buffer_t *now;
-    Word_t Index1;
-
-    Index1=0;
-    JLF(PValue,PJLArray, Index1);
-    //if (PValue!=NULL)
-    //    printf("%p %d\n",*PValue,*(int *)(*PValue));
-    while (PValue!=NULL)
-    {
-        now=(buffer_t *)*PValue;
-        memcpy(now->ele.write_to,&(now->ele.data),now->ele.len);
-        JLN(PValue,PJLArray, Index1);
-    }
-    cmtq.clear();
-    // while (!cmtq.empty())
-    // {
-    //     while (cmtq.begin()->ele.len==-1)
-    //     {
-    //         nanosleep(&tim, &tim2);
-    //     }
-    //     memcpy(cmtq.begin()->ele.write_to, &(cmtq.begin()->ele.data), cmtq.begin()->ele.len);
-    //     //dirty_idx = hash_addr((long) cmtq.begin()->ele.write_to);
-    //     //r = __sync_fetch_and_sub(&(dirties[dirty_idx]), 1);
-    //     cmtq.pop_front();
-    // }
-
-    PJLArray= (Pvoid_t) NULL;
-    //num_mutex.unlock();
-    return;
-}
-void garbage_collector()
-{
-    int r;
-    while(transferring)
-    {
-        nanosleep(&tim, &tim2);
-    }
-    r = __sync_bool_compare_and_swap(&transferring, 0, 1);
-    //num_mutex.lock();
-    while ((!cmtq.empty())&&(cmtq.begin()->cmt))
-    {
-        cmtq.pop_front();
-        //std::cout<<"pop"<<std::endl;
-    }
-    __sync_bool_compare_and_swap(&transferring, 1, 0);
-
-    //num_mutex.unlock();
-
-    return;
-}
 rt_mem_t *get_rt_mem()
 {
     if(!is_initialized)

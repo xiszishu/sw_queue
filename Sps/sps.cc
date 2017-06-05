@@ -31,7 +31,7 @@ dual log[LOGSIZE];
 int numa;
 
 double timer_begin,timer_end,sum;
-rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
+//rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 
 double GetWallTime(void)
 {
@@ -167,9 +167,6 @@ int main(int argc, char **argv)
   //cout << "dummy: undolog.size= " << undolog.size() << endl;
   //cout << "dummy: redolog.size= " << redolog.size() << endl;
   }
-  rt_mem->appfinish=1;
-
-  pthread_join(rt_mem->th1, NULL);
 
   printf("%.15lf\n",sum/batch);
   cout << "done swaps " << i << endl;

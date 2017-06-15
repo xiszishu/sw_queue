@@ -10,8 +10,8 @@ typedef uint64_t hrtime_t;
 static int global_cpu_speed_mhz = 0;
 static int global_write_latency_ns = 0;
 
-double timer_begin,timer_end,sum;
-double GetWallTime(void)
+//double timer_begin,timer_end,sum;
+static inline double GetWallTime(void)
 {
     struct timeval tp;
     static long start=0, startu;
@@ -71,7 +71,7 @@ static inline unsigned long long asm_rdtscp(void)
 #error "What architecture is this???"
 #endif
 
-size_t string_to_size(char* str)
+inline size_t string_to_size(char* str)
 {
     size_t factor = 1;
     size_t size;
@@ -98,7 +98,7 @@ size_t string_to_size(char* str)
     return size;
 }
 
-char *cpuinfo(char *valname)
+static inline char *cpuinfo(char *valname)
 {
     FILE *fp;
     char *line = NULL;
@@ -130,7 +130,7 @@ char *cpuinfo(char *valname)
     return NULL;
 }
 
-int cpu_speed_mhz()
+static inline int cpu_speed_mhz()
 {
     size_t val;
     char *str = cpuinfo("cpu MHz");
@@ -139,7 +139,7 @@ int cpu_speed_mhz()
     return val;
 }
 
-void init_pflush(int cpu_speed_mhz, int write_latency_ns)
+inline void init_pflush(int cpu_speed_mhz, int write_latency_ns)
 {
     global_cpu_speed_mhz = cpu_speed_mhz;
     global_write_latency_ns = write_latency_ns;

@@ -13,6 +13,7 @@
 
 #define VEC_SZ 5000//65536
 
+double timer_begin,timer_end,sum;
 int main(int argc, char *argv[])
 {
   void *a_p, *b_p, *c_p;

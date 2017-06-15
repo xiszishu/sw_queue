@@ -115,7 +115,6 @@ int main(int argc, char **argv)
     std::ifstream file1;
     file1.open("sps.txt");
     file1>>item_count>>swaps;
-    
   vector<long> array(item_count);
   map<int, long> undolog, redolog;
 

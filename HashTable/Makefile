@@ -8,7 +8,7 @@ JUDY	 :=-lJudy
 hashtable:
 	g++ -std=c++11 -g -D$(DFLAG) -pthread hash.cc -o hashtable
 buffer:
-	g++ -std=c++11 -g -D$(DFLAG) -pthread $(F) ../mmp_init.cc ../mmp_thread.cc ../mmp_user.cc hash_buffer.cc -o buffer $(JUDY)
+	g++ -std=c++11 -g -D$(DFLAG) -pthread $(F) ../mmp_init.cc ../mmp_thread.cc ../mmp_user.cc buffer_hash.cc -o buffer $(JUDY)
 #thread_buffer:
 #	gcc -O0 -g thread_buffer.c mmp_user.c mmp_init.c mmp_thread.c -o xthread_buff -lpthread
 

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <Judy.h>
 #include "mmp_user.h"
+#include "lat.h"
 #include <mutex>
 #define SIZE 100000
 
@@ -85,14 +86,15 @@ void my_xfer()
     Index1=0;
     JLF(PValue,PJLArray, Index1);
     //if (PValue!=NULL)
-    //    printf("%p %d\n",*PValue,*(int *)(*PValue));
+    //   printf("%p %d\n",*PValue,*(int *)(*PValue));
     while (PValue!=NULL)
     {
         now=(buffer_t *)*PValue;
         memcpy(now->ele.write_to,&(now->ele.data),now->ele.len);
+        emulate_latency_ns_fence(1000);
         JLN(PValue,PJLArray, Index1);
     }
-    cmtq.clear();
+
     // while (!cmtq.empty())
     // {
     //     while (cmtq.begin()->ele.len==-1)
@@ -105,6 +107,7 @@ void my_xfer()
     //     cmtq.pop_front();
     // }
 
+    cmtq.clear();
     PJLArray= (Pvoid_t) NULL;
     //num_mutex.unlock();
     return;

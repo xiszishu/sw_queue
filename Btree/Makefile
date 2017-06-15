@@ -1,13 +1,13 @@
 RM     := /bin/rm -rf
 BOOST  :=-lboost_program_options -lboost_random
-DFLAG	 :=OR
+DFLAG	 := OR
 F			 :=-fpermissive
 JUDY	 :=-lJudy
 
-sps:
-	g++ -std=c++11 -g -D$(DFLAG) -pthread $(F) ../mmp_init.cc ../mmp_thread.cc ../mmp_user.cc sps.cc -o sps $(JUDY)
+btree:
+	g++ -std=c++11 -g -D$(DFLAG) -pthread $(F) btree.cc -o btree $(JUDY)
 buffer:
-	g++ -std=c++11 -g -D$(DFLAG) -pthread $(F) ../mmp_init.cc ../mmp_thread.cc ../mmp_user.cc buffer_sps.cc -o buffer $(JUDY)
+	g++ -std=c++11 -g -D$(DFLAG) -pthread $(F) ../mmp_init.cc ../mmp_thread.cc ../mmp_user.cc buffer_btree.cc -o buffer $(JUDY)
 
 #thread_buffer:
 #	gcc -O0 -g thread_buffer.c mmp_user.c mmp_init.c mmp_thread.c -o xthread_buff -lpthread
@@ -16,4 +16,4 @@ buffer:
 #	gcc -O0 -g thread_base.c -o xthread_base -lpthread
 
 clean:
-	$(RM) sps buffer
+	$(RM) btree buffer

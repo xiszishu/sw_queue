@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include "../lat.h"
+#include "../flush.h"
 #define LOGSIZE 1000000
 
 struct DataItem
@@ -13,6 +14,7 @@ struct DataItem
 };
 typedef struct DataItem DataItem;
 
+double timer_begin,timer_end,sum;
 typedef std::pair <DataItem*, DataItem> dual;
 dual log[LOGSIZE];
 int numa;
@@ -33,14 +35,19 @@ void insert(DataItem ele)
     while (h[i/2].key>ele.key)
     {
         h[i]=h[i/2];
-        emulate_latency_ns_fence(2000);
+        asm_clflush((intptr_t *)&((h[i])));
+        ++numa%=LOGSIZE;
+        log[numa]=std::make_pair(&h[i],h[i]);
+        asm_clflush((intptr_t *)&((log[numa])));
+        asm_mfence();
         i/=2;
     }
     h[i]=ele;
-    emulate_latency_ns_fence(2000);
+    asm_clflush((intptr_t *)&((h[i])));
     ++numa%=LOGSIZE;
     log[numa]=std::make_pair(&h[i],ele);
-    emulate_latency_ns_fence(2000);
+    asm_clflush((intptr_t *)&((log[numa])));
+    asm_mfence();
 }
 DataItem Delete()
 {
@@ -57,16 +64,24 @@ DataItem Delete()
         if (nowEle.key>h[j].key)
         {
             h[i]=h[j];
-            emulate_latency_ns_fence(2000);
+            asm_clflush((intptr_t *)&((h[i])));
+            ++numa%=LOGSIZE;
+            log[numa]=std::make_pair(&h[i],h[i]);
+            asm_clflush((intptr_t *)&((log[numa])));
+            asm_mfence();
+            //emulate_latency_ns_fence(2000);
         }
         else break;
     }
     h[j]=nowEle;
-    emulate_latency_ns_fence(2000);
+    asm_clflush((intptr_t *)&((h[j])));
+    //emulate_latency_ns_fence(2000);
 
     ++numa%=LOGSIZE;
     log[numa]=std::make_pair(&h[j],nowEle);
-    emulate_latency_ns_fence(2000);
+    asm_clflush((intptr_t *)&((log[numa])));
+    asm_mfence();
+    //emulate_latency_ns_fence(2000);
 
     return minEle;
 }
@@ -104,6 +119,6 @@ int main()
     timer_end=GetWallTime();
     sum+=timer_end-timer_begin;
     printf("time: %.15lf\n",sum);
-    
+
     return 0;
 }

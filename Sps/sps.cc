@@ -18,6 +18,8 @@
 //#include "defines.h"
 #include "../mmp_user.h"
 #include "../mmp_init.h"
+#include "../lat.h"
+#include "../flush.h"
 #define VEC_SZ 65536
 #define ITEM_COUNT 1000000
 #define LOGSIZE 1000000
@@ -33,20 +35,6 @@ int numa;
 double timer_begin,timer_end,sum;
 //rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 
-double GetWallTime(void)
-{
-    struct timeval tp;
-    static long start=0, startu;
-    if (!start)
-        {
-            gettimeofday(&tp, NULL);
-            start = tp.tv_sec;
-            startu = tp.tv_usec;
-            return(0.0);
-        }
-    gettimeofday(&tp, NULL);
-    return( ((double) (tp.tv_sec - start)) + (tp.tv_usec-startu)/1000000.0 );
-}
 int build_array(vector<long>& a, int n)
 {
     int i,j;
@@ -91,9 +79,14 @@ void array_swap(vector<long>& a, map<int, long>& undolog, map<int, long>& redolo
   //temp  = a[k1];
   ++numa%=LOGSIZE;
   log[numa]=std::make_pair(k1,a[k1]);
+  emulate_latency_ns_fence(1000);
+  //asm_clflush((intptr_t *)&((log[numa])));
   ++numa%=LOGSIZE;
   log[numa]=std::make_pair(k2,a[k2]);
-  
+  emulate_latency_ns_fence(1000);
+  //asm_clflush((intptr_t *)&((log[numa])));
+  //asm_mfence();
+
   temp=a[k1];
 
   //a1 = *((long *) rt_mem->read(&a[k1]));
@@ -105,8 +98,13 @@ void array_swap(vector<long>& a, map<int, long>& undolog, map<int, long>& redolo
 
   //rt_mem->write_literal(&a2, sizeof(long), &a[k1]);
   a[k1] = a[k2];
+  emulate_latency_ns_fence(1000);
+  //asm_clflush((intptr_t *)&((a[k1])));
   //rt_mem->write_literal(&a1, sizeof(long), &a[k2]);
   a[k2] = temp;
+  emulate_latency_ns_fence(1000);
+  //asm_clflush((intptr_t *)&((a[k2])));
+  //asm_mfence();
 }
 
 void print_array(vector<long>& a, int n, ofstream& file)

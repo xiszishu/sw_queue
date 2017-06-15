@@ -7,7 +7,7 @@ JUDY	 :=-lJudy
 heap:
 	g++ -std=c++11 -g -D$(DFLAG) -pthread heap.cc -o heap
 buffer:
-	g++ -std=c++11 -g -D$(DFLAG) $(F) -pthread ../mmp_init.cc ../mmp_thread.cc ../mmp_user.cc heap_buffer.cc -o buffer $(JUDY)
+	g++ -std=c++11 -g -D$(DFLAG) $(F) -pthread ../mmp_init.cc ../mmp_thread.cc ../mmp_user.cc buffer_heap.cc -o buffer $(JUDY)
 #thread_buffer:
 #	gcc -O0 -g thread_buffer.c mmp_user.c mmp_init.c mmp_thread.c -o xthread_buff -lpthread
 

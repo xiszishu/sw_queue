@@ -9,6 +9,7 @@
 
 #define LOGSIZE 1000000
 
+double timer_begin,timer_end,sum;
 rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 
 struct DataItem

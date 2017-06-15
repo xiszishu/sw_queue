@@ -27,7 +27,8 @@ DataItem* hashArray;
 DataItem dummyItem;
 DataItem* item;
 
-int hashCode(int key) {
+int hashCode(int key)
+{
     return key % hashtable_size;
 }
 
@@ -104,7 +105,8 @@ void deleteH(DataItem* item)
 void display()
 {
    int i = 0;
-   for(i = 0; i<hashtable_size; i++) {
+   for(i = 0; i<hashtable_size; i++)
+   {
        //if(hashArray[i] != NULL)
          printf(" (%d,%d)",hashArray[i].key,hashArray[i].data);
          //else

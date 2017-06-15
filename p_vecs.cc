@@ -14,7 +14,7 @@ typedef std::pair <long*, int> dual;
 dual log[1000000];
 int numa;
 
-//double timer_begin,timer_end,sum;
+double timer_begin,timer_end,sum;
 
 int main(int argc, char *argv[]) {
   void *a_p, *b_p, *c_p;

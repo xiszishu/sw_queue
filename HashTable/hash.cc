@@ -7,21 +7,13 @@
 #include <iostream>
 #include <fstream>
 #include "../lat.h"
+#include "hash.h"
 
-#define SIZE 100
-#define LOGSIZE 1000000
-struct DataItem
-{
-    int data;
-    int key;
-};
-
-typedef struct DataItem DataItem;
-typedef std::pair <DataItem*, DataItem> dual;
 dual log[LOGSIZE];
 int numa;
 
 int ops,hashtable_size;
+double timer_begin,timer_end,sum;
 
 DataItem* hashArray;
 DataItem dummyItem;
@@ -117,13 +109,15 @@ void display()
 }
 void buildH()
 {
-    int i;
+    char ch[256]={};
     srand(time(NULL));
-    for (i=1;i<=hashtable_size;i++)
+    for (int i=1;i<=hashtable_size;i++)
     {
         hashArray[i-1].key=i-1;
-        hashArray[i-1].data=rand();
-        //cout<<i<<endl;
+        //hashArray[i-1].data=rand();
+        for (int j=0;j<255;j++)
+            ch[j]='a'+rand()%26;
+        strcpy(hashArray[i-1].data,ch);
     }
 }
 int main()
@@ -131,14 +125,16 @@ int main()
     int i,j,search_key;
     DataItem temp;
     DataItem* it;
+    char ch[256]={};
     std::ifstream file1;
     file1.open("hashtable.txt");
-    dummyItem.data=-1;
+    //dummyItem.data=-1;
     dummyItem.key=-1;
     file1>>hashtable_size>>ops;
+    file1.close();
     hashArray = (DataItem*) calloc(sizeof(DataItem),hashtable_size);
     //dummyItem = (struct DataItem*) malloc(sizeof(struct DataItem));
-    dummyItem.data = -1;
+    //dummyItem.data = -1;
     dummyItem.key = -1;
     numa=0;
 
@@ -149,7 +145,11 @@ int main()
     for (i=1;i<=ops;i++)
     {
         temp.key=rand()%(hashtable_size);
-        temp.data=rand();
+        //temp.data=rand();
+        for (int j=0;j<255;j++)
+            ch[j]='a'+rand()%26;
+        strcpy(temp.data,ch);
+
         it=search(search_key);
         //cout<<"-----------"<<endl;
         if (it==NULL)

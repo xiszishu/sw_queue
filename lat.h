@@ -10,7 +10,7 @@ typedef uint64_t hrtime_t;
 static int global_cpu_speed_mhz = 0;
 static int global_write_latency_ns = 0;
 
-//double timer_begin,timer_end,sum;
+extern double timer_begin,timer_end,sum;
 static inline double GetWallTime(void)
 {
     struct timeval tp;

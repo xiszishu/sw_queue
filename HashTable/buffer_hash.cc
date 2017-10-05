@@ -9,16 +9,8 @@
 #include "../mmp_user.h"
 #include "../mmp_init.h"
 #include "../lat.h"
+#include "./hash.h"
 
-#define SIZE 100
-
-struct DataItem
-{
-    int data;
-    int key;
-};
-
-typedef struct DataItem DataItem;
 int ops,hashtable_size;
 rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 

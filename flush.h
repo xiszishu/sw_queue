@@ -10,3 +10,10 @@ static inline void asm_mfence(void)
 {
     __asm__ __volatile__ ("mfence");
 }
+
+static inline void flush(volatile intptr_t *addr,int length)
+{
+    volatile intptr_t *p=addr;
+    for (int i=length;i>0;i-=64,p+=64)
+        asm_clflush(p);
+}

@@ -73,13 +73,17 @@ void array_swap(vector<char *>& a, int n, int i)
   log[numa].first=k1;
   strcpy(log[numa].second,a[k1]);
   emulate_latency_ns_fence(1000);
+  flush((intptr_t *)&log[numa].first,64);
+  flush((intptr_t *)log[numa].second,256);
   //asm_clflush((intptr_t *)&((log[numa])));
   ++numa%=LOGSIZE;
   log[numa].first=k2;
   strcpy(log[numa].second,a[k2]);
   emulate_latency_ns_fence(1000);
+  flush((intptr_t *)&log[numa].first,64);
+  flush((intptr_t *)log[numa].second,256);
   //asm_clflush((intptr_t *)&((log[numa])));
-  //asm_mfence();
+  asm_mfence();
 
   //temp=a[k1];
   strcpy(temp,a[k1]);
@@ -87,13 +91,15 @@ void array_swap(vector<char *>& a, int n, int i)
   //a[k1] = a[k2];
   strcpy(a[k1],a[k2]);
   emulate_latency_ns_fence(1000);
+  flush((intptr_t *)a[k1],256);
   //asm_clflush((intptr_t *)&((a[k1])));
   //rt_mem->write_literal(&a1, sizeof(long), &a[k2]);
   //a[k2] = temp;
   strcpy(a[k2],temp);
   emulate_latency_ns_fence(1000);
+  flush((intptr_t *)a[k2],256);
   //asm_clflush((intptr_t *)&((a[k2])));
-  //asm_mfence();
+  asm_mfence();
 }
 
 void print_array(vector<string>& a, int n, ofstream& file)

@@ -65,8 +65,8 @@ void internal_init()
             tim.tv_sec = 0;
             tim.tv_nsec = 10;
 
-            giter=cmtq.begin();
             cmtq.resize(SIZE);
+            giter=cmtq.begin();
 
             is_initialized = 1;
         }
@@ -95,7 +95,7 @@ void my_xfer()
     while (PValue!=NULL)
     {
         now=(buffer_t *)*PValue;
-        memcpy(now->ele.write_to,&(now->ele.data),now->ele.len);
+        memcpy(now->ele.write_to,now->ele.data,now->ele.len);
         emulate_latency_ns_fence(1000);
         JLN(PValue,PJLArray, Index1);
     }
@@ -151,7 +151,7 @@ void my_write_literal(void *data, int len, void *location)
 
   if (giter==cmtq.end()) my_xfer();
 
-  std::deque<buffer_t>::iterator it1=giter++;
+  std::deque<buffer_t>::iterator it1=giter;
 
   it1->ele.write_to=location;
   it1->txid=glob_rt_mem.curtxid;
@@ -163,7 +163,7 @@ void my_write_literal(void *data, int len, void *location)
   *PValue= &(*it1);
 
   it1->ele.len = len;
-
+  giter++;
 }
 
 void *my_read(void *location)

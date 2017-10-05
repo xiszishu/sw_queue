@@ -16,6 +16,7 @@ struct rt_mem_t {
     void *(*read)(void *location);
     void (*do_transfer)(void);
     void (*txend)(void);
+    void (*finish)(void);
 
     //void (*check_self)(void);
     pthread_t th1;
@@ -24,7 +25,7 @@ struct rt_mem_t {
 };
 
 struct write_t {
-  void *data;
+  char data[300];
   void *write_to;
   int len;
     //int direct_val;

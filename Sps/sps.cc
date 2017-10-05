@@ -27,39 +27,41 @@
 using namespace std;
 
 //typedef mystring ch[256];
-typedef pair <int, long> Int_Pair;
-typedef std::pair <int, int> dual;
+typedef std::pair <int, char *> Int_Pair;
+typedef std::pair <int, char *> dual;
 dual log[LOGSIZE];
 int numa;
 
 double timer_begin,timer_end,sum;
 //rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 
-int build_array(vector<long>& a, int n)
+int build_array(vector<char *>& a, int n)
 {
-    int i,j;
     char ch[256]={};
     //ch[21]='\0';
     srand(time(NULL));
     //memset(c);
-    for (i = 0; i < n; i++)
+    for (int i=0; i < n; i++)
     {
-        //for (j=0;j<255;j++)
-        //    ch[j]='a'+rand()%26;
-        a[i]=rand();
-        //cout<<sizeof(a[i])<<endl;
-        //cout<<a[i]<<endl;
-        //cout<<"****************"<<endl;
+        a[i]=malloc(256);
+        for (int j=0;j<255;j++)
+            ch[j]='a'+rand()%26;
+        //a[i]=rand();
+        strcpy(a[i],ch);
+    }
+    for (int i=0;i<LOGSIZE;i++)
+    {
+        log[i].second=malloc(256);
     }
     return 0;
 }
 
-void array_swap(vector<long>& a, map<int, long>& undolog, map<int, long>& redolog, int n, int i)
+void array_swap(vector<char *>& a, int n, int i)
 {
   //mcsim_skip_instrs_begin();
   int  k1, k2;
   //mystring temp;
-  long temp,a1,a2;
+  char temp[256],a1[256],a2[256];
   //string a1,a2;
   long b[1000];
 
@@ -67,47 +69,34 @@ void array_swap(vector<long>& a, map<int, long>& undolog, map<int, long>& redolo
   k1 = rand() % n;
   k2 = rand() % n;
 
-  //cout << "swaps a[" << k1 << "] and a[" << k2 << "]" << endl;
-  //mcsim_skip_instrs_end();
-  // mcsim_log_begin();
-  //undolog.insert(Int_Pair(k1, a[k1]));
-  //undolog.insert(Int_Pair(k2, a[k2]));
-  //redolog.insert(Int_Pair(k1, a[k2]));
-  //redolog.insert(Int_Pair(k2, a[k1]));
-  //mcsim_log_end();
-  //mcsim_mem_fence(); // clflush+fence
-  //temp  = a[k1];
   ++numa%=LOGSIZE;
-  log[numa]=std::make_pair(k1,a[k1]);
+  log[numa].first=k1;
+  strcpy(log[numa].second,a[k1]);
   emulate_latency_ns_fence(1000);
   //asm_clflush((intptr_t *)&((log[numa])));
   ++numa%=LOGSIZE;
-  log[numa]=std::make_pair(k2,a[k2]);
+  log[numa].first=k2;
+  strcpy(log[numa].second,a[k2]);
   emulate_latency_ns_fence(1000);
   //asm_clflush((intptr_t *)&((log[numa])));
   //asm_mfence();
 
-  temp=a[k1];
+  //temp=a[k1];
+  strcpy(temp,a[k1]);
 
-  //a1 = *((long *) rt_mem->read(&a[k1]));
-  //a2 = *((long *) rt_mem->read(&a[k2]));
-  //rt_mem->write_literal((void *) ((long) b[k2]), sizeof(long), &b[k1]);
-  //rt_mem->write_literal((void *) ((long) b[k1]), sizeof(long), &b[k2]);
-
-  //rt_mem->txend();
-
-  //rt_mem->write_literal(&a2, sizeof(long), &a[k1]);
-  a[k1] = a[k2];
+  //a[k1] = a[k2];
+  strcpy(a[k1],a[k2]);
   emulate_latency_ns_fence(1000);
   //asm_clflush((intptr_t *)&((a[k1])));
   //rt_mem->write_literal(&a1, sizeof(long), &a[k2]);
-  a[k2] = temp;
+  //a[k2] = temp;
+  strcpy(a[k2],temp);
   emulate_latency_ns_fence(1000);
   //asm_clflush((intptr_t *)&((a[k2])));
   //asm_mfence();
 }
 
-void print_array(vector<long>& a, int n, ofstream& file)
+void print_array(vector<string>& a, int n, ofstream& file)
 {
   int i;
 
@@ -121,59 +110,63 @@ int main(int argc, char **argv)
     std::ifstream file1;
     file1.open("sps.txt");
     file1>>item_count>>swaps;
+    file1.close();
 
-  vector<long> array(item_count);
-  map<int, long> undolog, redolog;
+    vector<char *> array(item_count);
 
-  // Initialization: build an array with random intergers
-  if (build_array(array, item_count)) {
-    cerr << "Fails to build an array" << endl;
-    return -1;
-  }
+    // Initialization: build an array with random intergers
+    if (build_array(array, item_count)) {
+        cerr << "Fails to build an array" << endl;
+        return -1;
+    }
 
   //mcsim_skip_instrs_end();
 
 #ifdef SPS_DEBUG
-  ofstream orig;
-  orig.open("orig.debug");
-  print_array(array, item_count, orig);
+    ofstream orig;
+    orig.open("orig.debug");
+    print_array(array, item_count, orig);
 #endif
 
-  sum=0;
-  numa=0;
-  int batch=100;
-  for (int k=1;k<=batch;k++)
-  {
-  timer_begin=GetWallTime();
-  // randomly swaps between entries
-  for (i = 0; i < swaps; i++)
-  {
-    array_swap(array, undolog, redolog, item_count, i); // swap two entris at a time
-    //printf("%d\n",i);
-    //mcsim_mem_fence();  //clflush+fence
-  }
-  //printf("finish swaps\n");
- 
+    sum=0;
+    numa=0;
+    int batch=1;
+    for (int k=1;k<=batch;k++)
+    {
+        timer_begin=GetWallTime();
+        // randomly swaps between entries
+        for (i = 0; i < swaps; i++)
+        {
+            array_swap(array, item_count, i); // swap two entris at a time
+            //printf("%d\n",i);
+            //mcsim_mem_fence();  //clflush+fence
+        }
+        //printf("finish swaps\n");
 
-  timer_end=GetWallTime();
-  sum+=timer_end-timer_begin;
+        timer_end=GetWallTime();
+        sum+=timer_end-timer_begin;
 
-  //mcsim_skip_instrs_begin();
-  //cout << "done swaps " << i << endl;
+        //mcsim_skip_instrs_begin();
+        //cout << "done swaps " << i << endl;
 
-  // make sure log structures are not dummy, will not discard by compile+O3
-  //cout << "dummy: undolog.size= " << undolog.size() << endl;
-  //cout << "dummy: redolog.size= " << redolog.size() << endl;
-  }
+        // make sure log structures are not dummy, will not discard by compile+O3
+        //cout << "dummy: undolog.size= " << undolog.size() << endl;
+        //cout << "dummy: redolog.size= " << redolog.size() << endl;
+    }
 
-  printf("%.15lf\n",sum/batch);
-  cout << "done swaps " << i << endl;
+    printf("%.15lf\n",sum/batch);
+    cout << "done swaps " << i << endl;
+
+    for (int i=0;i<item_count;i++)
+        free(array[i]);
+    for (int i=0;i<LOGSIZE;i++)
+        free(log[i].second);
 #ifdef SPS_DEBUG
-  ofstream now;
-  now.open("now.debug");
-  print_array(array, item_count, now);
+    ofstream now;
+    now.open("now.debug");
+    print_array(array, item_count, now);
 #endif
   
-  return 0;
-  //mcsim_skip_instrs_end();
+    return 0;
+    //mcsim_skip_instrs_end();
 }

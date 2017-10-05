@@ -35,15 +35,22 @@ void insert(DataItem ele)
     while (h[i/2].key>ele.key)
     {
         h[i]=h[i/2];
+        emulate_latency_ns_fence(1000);
         asm_clflush((intptr_t *)&((h[i])));
+        asm_mfence();
+
         ++numa%=LOGSIZE;
         log[numa]=std::make_pair(&h[i],h[i]);
+        emulate_latency_ns_fence(1000);
         asm_clflush((intptr_t *)&((log[numa])));
         asm_mfence();
         i/=2;
     }
     h[i]=ele;
+    emulate_latency_ns_fence(1000);
     asm_clflush((intptr_t *)&((h[i])));
+    asm_mfence();
+
     ++numa%=LOGSIZE;
     log[numa]=std::make_pair(&h[i],ele);
     asm_clflush((intptr_t *)&((log[numa])));
@@ -69,19 +76,19 @@ DataItem Delete()
             log[numa]=std::make_pair(&h[i],h[i]);
             asm_clflush((intptr_t *)&((log[numa])));
             asm_mfence();
-            //emulate_latency_ns_fence(2000);
+            emulate_latency_ns_fence(1000);
         }
         else break;
     }
     h[j]=nowEle;
     asm_clflush((intptr_t *)&((h[j])));
-    //emulate_latency_ns_fence(2000);
+    emulate_latency_ns_fence(1000);
 
     ++numa%=LOGSIZE;
     log[numa]=std::make_pair(&h[j],nowEle);
     asm_clflush((intptr_t *)&((log[numa])));
     asm_mfence();
-    //emulate_latency_ns_fence(2000);
+    emulate_latency_ns_fence(1000);
 
     return minEle;
 }

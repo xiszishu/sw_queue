@@ -12,15 +12,7 @@ rt_mem_t *my_init()
   int rc;
 
   rt_mem = get_rt_mem();
-  // rt_mem->appfinish=0;
-  // rc = pthread_create(&thread, NULL, LoopTransfer, (void *) rt_mem);
-  // if(rc)
-  // {
-  //     perror("Failed to create thread for transfering dram to nvm");
-  // }
-  // rt_mem->curtxid=0;
-  // rt_mem->th1=thread;
-
+  
   return rt_mem;
 }
 

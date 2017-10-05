@@ -6,19 +6,9 @@
 #include <time.h>
 #include <iostream>
 #include <fstream>
-#include "../mmp_user.h"
-#include "../mmp_init.h"
-#include "../lat.h"
+#include "hash.h"
 
-#define SIZE 100
-
-struct DataItem
-{
-    int data;
-    int key;
-};
-
-typedef struct DataItem DataItem;
+double timer_begin,timer_end,sum;
 int ops,hashtable_size;
 rt_mem_t *rt_mem = get_mmp_initializer()->initialize();
 
@@ -70,35 +60,12 @@ void insertH(DataItem temp)
         if (i==hashIndex) return;
         cur = *((DataItem *) rt_mem->read(&hashArray[i]));
     }
-    //hashArray[i].data=temp.data;
-    //hashArray[i].key=temp.key;
-
     rt_mem->write_literal(&temp, sizeof(DataItem), &hashArray[i]);
-    //item->data = data;
-    //item->key = key;
-
-   //get the hash
-   //int i,hashIndex = hashCode(key);
-
-   //move in array until an empty or deleted cell
-   // while(hashArray != NULL && hashArray[hashIndex].key != -1)
-   // {
-   //    //go to next cell
-   //    ++hashIndex;
-   //    //wrap around the table
-   //    hashIndex %= SIZE;
-   // }
-   // hashArray[hashIndex] = item;
 }
 
 void deleteH(DataItem* item)
 {
    int key = item->key;
-
-   //get the hash
-   //struct DataItem temp = *item;
-   //assign a dummy item at deleted position
-   //*item = dummyItem;
    rt_mem->write_literal(&dummyItem, sizeof(DataItem), item);
    return ;
 
@@ -118,13 +85,16 @@ void display()
 }
 void buildH()
 {
-    int i;
+    char ch[256]={};
     srand(time(NULL));
-    for (i=1;i<=hashtable_size;i++)
+    for (int i=1;i<=hashtable_size;i++)
     {
         hashArray[i-1].key=i-1;
-        hashArray[i-1].data=rand();
+        //hashArray[i-1].data=rand();
         //cout<<i<<endl;
+        for (int j=0;j<255;j++)
+            ch[j]='a'+rand()%26;
+        strcpy(hashArray[i-1].data,ch);
     }
 }
 int main()
@@ -132,14 +102,14 @@ int main()
     int i,j,search_key;
     DataItem temp;
     DataItem* it;
+    char ch[256]={};
     std::ifstream file1;
     file1.open("hashtable.txt");
-    dummyItem.data=-1;
     dummyItem.key=-1;
     file1>>hashtable_size>>ops;
+    file1.close();
     hashArray = (DataItem*) calloc(sizeof(DataItem),hashtable_size);
     //dummyItem = (struct DataItem*) malloc(sizeof(struct DataItem));
-    dummyItem.data = -1;
     dummyItem.key = -1;
 
     buildH();
@@ -148,7 +118,10 @@ int main()
     for (i=1;i<=ops;i++)
     {
         temp.key=rand()%(hashtable_size);
-        temp.data=rand();
+        //temp.data=rand();
+        for (int j=0;j<255;j++)
+            ch[j]='a'+rand()%26;
+        strcpy(temp.data,ch);
         it=search(search_key);
         //cout<<"-----------"<<endl;
         if (it==NULL)

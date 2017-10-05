@@ -67,7 +67,7 @@ public:
 	// The main function that inserts a new key in this B-Tree
 	void insert(int k);
 };
-BTree t(3);
+BTree t(5);
 
 // Constructor for BTreeNode class
 BTreeNode::BTreeNode(int t1, bool leaf1)
@@ -114,11 +114,13 @@ BTreeNode *BTreeNode::search(int k)
 {
 	// Find the first key greater than or equal to k
 	int i = 0;
-  int now=*(int *)rt_mem->read(&keys[i]);
+  //int now=*(int *)rt_mem->read(&keys[i]);
+  int now=keys[i];
 	while (i < n && k > now)
   {
       i++;
-      if (i<n) now=*(int *)rt_mem->read(&keys[i]);
+      if (i<n) now=keys[i];
+      //now=*(int *)rt_mem->read(&keys[i]);
       else now=-1;
   }
 
@@ -180,7 +182,9 @@ void BTree::insert(int k)
           // New root has two children now. Decide which of the
           // two children is going to have new key
           int i = 0;
-          int a=*(int *)rt_mem->read(&s->keys[0]);
+          //int a=*(int *)rt_mem->read(&s->keys[0]);
+          int a=s->keys[0];
+
           if (a < k)
               i++;
           s->C[i]->insertNonFull(k);
@@ -209,14 +213,17 @@ void BTreeNode::insertNonFull(int k)
 		// a) Finds the location of new key to be inserted
 		// b) Moves all greater keys to one place ahead
     //std::cout<<"0"<<std::endl;
-    if (i>=0)  now=*(int *)rt_mem->read(&keys[i]);
+      if (i>=0) now=keys[i];
+        //now=*(int *)rt_mem->read(&keys[i]);
 		while (now > k)
 		{
         //keys[i+1] = keys[i];
         //now=*(int *)rt_mem->read(&keys[i]);
+        now=keys[i];
         rt_mem->write_literal(&now, sizeof(int), &keys[i+1]);
         i--;
-        if (i>=0)  now=*(int *)rt_mem->read(&keys[i]);
+        if (i>=0) now=keys[i];
+            //now=*(int *)rt_mem->read(&keys[i]);
         else break;
 		}
 
@@ -229,11 +236,13 @@ void BTreeNode::insertNonFull(int k)
 	else // If this node is not leaf
 	{
 		// Find the child which is going to have the new key
-      if (i>=0)  now=*(int *)rt_mem->read(&keys[i]);
+      if (i>=0) now=keys[i];
+               //now=*(int *)rt_mem->read(&keys[i]);
 		while (now > k)
     {
         i--;
-        if (i>=0) now=*(int *)rt_mem->read(&keys[i]);
+        if (i>=0) now=keys[i];
+                 //now=*(int *)rt_mem->read(&keys[i]);
         else break;
     }
 
@@ -247,7 +256,8 @@ void BTreeNode::insertNonFull(int k)
 			// After split, the middle key of C[i] goes up and
 			// C[i] is splitted into two. See which of the two
 			// is going to have the new key
-      now=*(int *)rt_mem->read(&keys[i+1]);
+      //now=*(int *)rt_mem->read(&keys[i+1]);
+      now=keys[i+1];
 			if (now < k)
 				i++;
 		}
@@ -270,7 +280,8 @@ void BTreeNode::splitChild(int i, BTreeNode *y)
 	for (int j = 0; j < t-1; j++)
   {
       //z->keys[j] = y->keys[j+t];
-      now=*(int *)rt_mem->read(&y->keys[j+t]);
+      //now=*(int *)rt_mem->read(&y->keys[j+t]);
+      now=y->keys[j+i];
       rt_mem->write_literal(&now, sizeof(int), &z->keys[j]);
   }
 
@@ -296,13 +307,15 @@ void BTreeNode::splitChild(int i, BTreeNode *y)
 	// new key and move all greater keys one space ahead
 	for (int j = n-1; j >= i; j--)
   {
-      now=*(int *)rt_mem->read(&keys[j]);
+      //now=*(int *)rt_mem->read(&keys[j]);
+      now=keys[j];
       //keys[j+1] = keys[j];
       rt_mem->write_literal(&now, sizeof(int), &keys[j+1]);
   }
 
 	// Copy the middle key of y to this node
-  now=*(int *)rt_mem->read(&y->keys[t-1]);
+  //now=*(int *)rt_mem->read(&y->keys[t-1]);
+  now=y->keys[t-1];
   rt_mem->write_literal(&now, sizeof(int), &keys[i]);
 	//keys[i] = y->keys[t-1];
   //rt_mem->write_literal(&keys[t-1], sizeof(int), &keys[i]);
@@ -343,11 +356,11 @@ int main()
     // t.insert(7);
     // t.insert(17);
 
-    std::cout << "Traversal of the constucted tree is ";
-    t.traverse();
+    //std::cout << "Traversal of the constucted tree is ";
+    //t.traverse();
 
     timer_begin=GetWallTime();
-
+    
     for (i=1;i<=ops;i++)
     {
         nowkey=rand()%ops;

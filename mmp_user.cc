@@ -9,7 +9,6 @@
 #include <Judy.h>
 #include "mmp_user.h"
 #include "lat.h"
-#include <mutex>
 #define SIZE 100000
 
 static int is_initialized = 0, initializing = 0, transferring = 0;
@@ -18,8 +17,8 @@ static std::deque<buffer_t> cmtq;
 static bool dirties[SIZE];
 static buffer_t fake;
 struct timespec tim, tim2;
-static std::mutex num_mutex;
 static pthread_mutex_t lock;
+std::deque<buffer_t>::iterator giter=cmtq.begin();
 
 Pvoid_t  PJLArray;//list for address hash
 Word_t *PValue;
@@ -30,13 +29,15 @@ void my_write_literal(void *d_data, int len, void *location); // The d_data "poi
 void *my_read(void *location);
 void my_xfer();
 void my_txend();
+void my_finish();
 
 static rt_mem_t glob_rt_mem = {
     .write = my_write,
     .write_literal = my_write_literal,
     .read = my_read,
     .do_transfer = my_xfer,
-    .txend=my_txend
+    .txend=my_txend,
+    .finish=my_finish
     //.check_self = my_check_self
 };
 
@@ -45,7 +46,12 @@ long hash_addr(long addr)
     //std::cout<<addr<<std::endl;
     return SIZE & (addr);
 }
-
+void my_finish()
+{
+    my_xfer();
+    cmtq.clear();
+    return;
+}
 void internal_init()
 {
     printf("initializing\n");
@@ -54,7 +60,8 @@ void internal_init()
         int r = __sync_bool_compare_and_swap(&initializing, 0, 1);
         if(r)
         {
-            fake.ele.data=NULL;
+            //fake.ele.data="";
+            //printf("string size:%d\n",sizeof(cmtq.begin()->ele.data));
             fake.ele.write_to=NULL;
             fake.ele.len=0;
             fake.st=-1;
@@ -62,8 +69,8 @@ void internal_init()
 
             tim.tv_sec = 0;
             tim.tv_nsec = 10;
-
             is_initialized = 1;
+            cmtq.resize(SIZE,fake);
         }
         PJLArray= (Pvoid_t) NULL;
         memset(dirties,0,sizeof(dirties));
@@ -90,7 +97,7 @@ void my_xfer()
     while (PValue!=NULL)
     {
         now=(buffer_t *)*PValue;
-        memcpy(now->ele.write_to,&(now->ele.data),now->ele.len);
+        memcpy(now->ele.write_to,now->ele.data,now->ele.len);
         emulate_latency_ns_fence(1000);
         JLN(PValue,PJLArray, Index1);
     }
@@ -107,7 +114,9 @@ void my_xfer()
     //     cmtq.pop_front();
     // }
 
-    cmtq.clear();
+    //cmtq.clear();
+    //cmtq.erase(cmtq.begin(),cmtq.end());
+    giter=cmtq.begin();
     PJLArray= (Pvoid_t) NULL;
     //num_mutex.unlock();
     return;
@@ -123,7 +132,7 @@ void my_write(void *data, int len, void *location)
   buffer_t *temp;
   cmtq.push_back(fake);
   temp=&cmtq.back();
-  temp->ele.data = data;
+  //temp->ele.data = data;
   temp->ele.write_to = location;
   //temp.ele.len=len;
   temp->st=2;
@@ -149,52 +158,19 @@ void my_write_literal(void *data, int len, void *location)
 {
   int wIdx, r;
   long dirty_idx;
-  //buffer_t *temp;
 
-  //wIdx = __sync_fetch_and_add(&(buffer.write_idx), 1) & buffer.and_seed;
-  //wIdx = __sync_fetch_and_add(&(buffer.write_idx), 1);
-  //if(wIdx >= WRITE_BUFFER_SIZE) {
-  //  wIdx = wIdx & buffer.and_seed;
- // }
-  //std::cout<<cmtq.size()<<std::endl;
-  if (cmtq.size()>=SIZE) my_xfer();
+  if (giter==cmtq.end()) my_xfer();
 
-  //num_mutex.lock();
-  cmtq.push_back(fake);
-  //num_mutex.unlock();
-  std::deque<buffer_t>::iterator it1=cmtq.end()-1;
-  //num_mutex.unlock();
+  std::deque<buffer_t>::iterator it1=giter++;
 
-  //__sync_bool_compare_and_swap(&transferring, 1, 0);
-  //temp=&cmtq.back();
-  //write_t *ele = &buffer.elements[wIdx];
-  //ele->write_to = location;
-  //ele->direct_val = 1;
   it1->ele.write_to=location;
   it1->txid=glob_rt_mem.curtxid;
 
-  //temp->ele.data=data;
-  memcpy(&(it1->ele.data), data, len); // Treat the void pointer as a literal value
-
-  // For reads to know if this value hasn't been moved to NVRAM yet
-  //dirty_idx = hash_addr((long) location);
+  memcpy(it1->ele.data, data, len);
 
   JLI(PValue,PJLArray,location);
   *PValue= &(*it1);
 
-  // r = __sync_fetch_and_add(&(dirties[dirty_idx]), 1);
-  // while(!r)
-  // {
-  //     r = __sync_fetch_and_add(&(dirties[dirty_idx]), 1);
-  // }
-  //if (len==-1)
-  //std::cout<<"invalid"<<std::endl;
-
-	// Len is set last because it is used to determine if the data is ready to be moved from buffer to nvm
-  //std::cout<<cmtq.size()<<" "<<len<<std::endl;
-  //std::cout<<"add"<<cmtq.size()<<std::endl;
-  //std::cout<<"add"<<cmtq.front().ele.len<<std::endl;
-  //std::cout<<"**********"<<std::endl;
   it1->ele.len = len;
 
 }
@@ -204,7 +180,6 @@ void *my_read(void *location)
     int dirty_idx = hash_addr((long) location);
     void *p;
     Word_t Index=location;
-
 
     //***********optimization of Judy***************
     JLL(PValue,PJLArray,Index);

@@ -68,7 +68,7 @@ public:
 	// The main function that inserts a new key in this B-Tree
 	void insert(int k);
 };
-BTree t(3);
+BTree t(5);
 
 // Constructor for BTreeNode class
 BTreeNode::BTreeNode(int t1, bool leaf1)
@@ -152,6 +152,9 @@ void BTree::insert(int k)
 		root->n = 1; // Update number of keys in root
     ++numa%=LOGSIZE;
     log[numa]=std::make_pair(&root->keys[0],k);
+    emulate_latency_ns_fence(1000);
+    asm_clflush((intptr_t *)&((root->keys[0])));
+    asm_mfence();
     //printf("insert address:%p\n",&root->keys[0]);
 	}
 	else // If tree is not empty
@@ -200,6 +203,11 @@ void BTreeNode::insertNonFull(int k)
 		while (i >= 0 && keys[i] > k)
 		{
         keys[i+1] = keys[i];
+        ++numa%=LOGSIZE;
+        log[numa]=std::make_pair(&keys[i+1],k);
+        emulate_latency_ns_fence(1000);
+        asm_clflush((intptr_t *)&((log[numa])));
+        asm_mfence();
         i--;
 		}
 
@@ -209,6 +217,9 @@ void BTreeNode::insertNonFull(int k)
     //printf("insert address:%p\n",&this->keys[i+1]);
     ++numa%=LOGSIZE;
     log[numa]=std::make_pair(&keys[i+1],k);
+    emulate_latency_ns_fence(1000);
+    asm_clflush((intptr_t *)&((log[numa])));
+    asm_mfence();
 	}
 	else // If this node is not leaf
 	{
@@ -247,6 +258,9 @@ void BTreeNode::splitChild(int i, BTreeNode *y)
 		z->keys[j] = y->keys[j+t];
     ++numa%=LOGSIZE; //fake log
     log[numa]=std::make_pair(NULL,0);
+    emulate_latency_ns_fence(1000);
+    asm_clflush((intptr_t *)&((log[numa])));
+    asm_mfence();
   }
 
 	// Copy the last t children of y to z
@@ -257,6 +271,9 @@ void BTreeNode::splitChild(int i, BTreeNode *y)
         z->C[j] = y->C[j+t];
         ++numa%=LOGSIZE; //fake log
         log[numa]=std::make_pair(NULL,0);
+        emulate_latency_ns_fence(1000);
+        asm_clflush((intptr_t *)&((log[numa])));
+        asm_mfence();
     }
 	}
 
@@ -270,12 +287,18 @@ void BTreeNode::splitChild(int i, BTreeNode *y)
 		C[j+1] = C[j];
     ++numa%=LOGSIZE; //fake log
     log[numa]=std::make_pair(NULL,0);
+    emulate_latency_ns_fence(1000);
+    asm_clflush((intptr_t *)&((log[numa])));
+    asm_mfence();
   }
 
 	// Link the new child to this node
 	C[i+1] = z;
   ++numa%=LOGSIZE; //fake log
   log[numa]=std::make_pair(NULL,0);
+  emulate_latency_ns_fence(1000);
+  asm_clflush((intptr_t *)&((log[numa])));
+  asm_mfence();
 
 	// A key of y will move to this node. Find location of
 	// new key and move all greater keys one space ahead
@@ -285,6 +308,9 @@ void BTreeNode::splitChild(int i, BTreeNode *y)
 
       ++numa%=LOGSIZE;
       log[numa]=std::make_pair(&keys[j+1], keys[j+1]);
+      emulate_latency_ns_fence(1000);
+      asm_clflush((intptr_t *)&((log[numa])));
+      asm_mfence();
   }
 
 	// Copy the middle key of y to this node
@@ -292,6 +318,9 @@ void BTreeNode::splitChild(int i, BTreeNode *y)
 
   ++numa%=LOGSIZE;
   log[numa]=std::make_pair(&keys[i], keys[i]);
+  emulate_latency_ns_fence(1000);
+              asm_clflush((intptr_t *)&((log[numa])));
+  asm_mfence();
 
 	// Increment count of keys in this node
 	n = n + 1;
@@ -325,8 +354,8 @@ int main()
     // t.insert(7);
     // t.insert(17);
 
-    std::cout << "Traversal of the constucted tree is ";
-    t.traverse();
+    //std::cout << "Traversal of the constucted tree is ";
+    //t.traverse();
 
     timer_begin=GetWallTime();
     for (i=1;i<=ops;i++)

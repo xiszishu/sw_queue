@@ -6,18 +6,14 @@
 #include <time.h>
 #include <iostream>
 #include <fstream>
-#include "../lat.h"
+// #include "../mmp_user.h"
+// #include "../mmp_init.h"
+// #include "../lat.h"
+// #include "../flush.h"
+#include "./hash.h"
 
-#define SIZE 100
-#define LOGSIZE 1000000
-struct DataItem
-{
-    int data;
-    int key;
-};
-
-typedef struct DataItem DataItem;
 typedef std::pair <DataItem*, DataItem> dual;
+double timer_begin,timer_end,sum;
 dual log[LOGSIZE];
 int numa;
 
@@ -65,27 +61,26 @@ void insertH(DataItem temp)
         i%=hashtable_size;
         if (i==hashIndex) return;
     }
-    hashArray[i].data=temp.data;
+    //hashArray[i].data=temp.data;
+    strcpy(hashArray[i].data,temp.data);
     hashArray[i].key=temp.key;
+    emulate_latency_ns_fence(40000);
+    flush((intptr_t *)&((hashArray[i].key)),64);
+    flush((intptr_t *)(&(hashArray[i].data[0])),256);
+
+    asm_mfence();
+
     ++numa%=LOGSIZE;
     log[numa]=std::make_pair(&hashArray[i],temp);
+    emulate_latency_ns_fence(40000);
+    //asm_clflush((intptr_t *)&((log[numa])));
+    flush((intptr_t *)&((log[numa].first)),64);
+    flush((intptr_t *)&((log[numa].second.key)),64);
+    flush((intptr_t *)(&(log[numa].second.data[0])),256);
 
-    //rt_mem->write_literal(&temp, sizeof(DataItem), &hashArray[i]);
-    //item->data = data;
-    //item->key = key;
+    asm_mfence();
 
-   //get the hash
-   //int i,hashIndex = hashCode(key);
-
-   //move in array until an empty or deleted cell
-   // while(hashArray != NULL && hashArray[hashIndex].key != -1)
-   // {
-   //    //go to next cell
-   //    ++hashIndex;
-   //    //wrap around the table
-   //    hashIndex %= SIZE;
-   // }
-   // hashArray[hashIndex] = item;
+    return;
 }
 
 void deleteH(DataItem* item)
@@ -96,8 +91,18 @@ void deleteH(DataItem* item)
    //struct DataItem temp = *item;
    //assign a dummy item at deleted position
    *item = dummyItem;
+   emulate_latency_ns_fence(40000);
+   flush((intptr_t *)&((item->key)),64);
+   flush((intptr_t *)(&(item->data[0])),256);
+   asm_mfence();
+
    ++numa%=LOGSIZE;
    log[numa]=std::make_pair(item,dummyItem);
+   emulate_latency_ns_fence(40000);
+   flush((intptr_t *)&((log[numa].first)),64);
+   flush((intptr_t *)&((log[numa].second.key)),64);
+   flush((intptr_t *)(&(log[numa].second.data[0])),256);
+   asm_mfence();
    //rt_mem->write_literal(&dummyItem, sizeof(DataItem), item);
    return ;
 }
@@ -117,28 +122,32 @@ void display()
 }
 void buildH()
 {
-    int i;
+    char ch[256]={};
     srand(time(NULL));
-    for (i=1;i<=hashtable_size;i++)
+    for (int i=1;i<=hashtable_size;i++)
     {
         hashArray[i-1].key=i-1;
-        hashArray[i-1].data=rand();
+        //hashArray[i-1].data=rand();
         //cout<<i<<endl;
+        for (int j=0;j<255;j++)
+            ch[j]='a'+rand()%26;
+        strcpy(hashArray[i-1].data,ch);
     }
 }
 int main()
 {
-    int i,j,search_key;
+    int search_key;
     DataItem temp;
     DataItem* it;
     std::ifstream file1;
+    char ch[256]={};
     file1.open("hashtable.txt");
-    dummyItem.data=-1;
+    //dummyItem.data=-1;
     dummyItem.key=-1;
     file1>>hashtable_size>>ops;
+    file1.close();
     hashArray = (DataItem*) calloc(sizeof(DataItem),hashtable_size);
-    //dummyItem = (struct DataItem*) malloc(sizeof(struct DataItem));
-    dummyItem.data = -1;
+
     dummyItem.key = -1;
     numa=0;
 
@@ -146,10 +155,13 @@ int main()
     //display();
     timer_begin=GetWallTime();
 
-    for (i=1;i<=ops;i++)
+    for (int i=1;i<=ops;i++)
     {
         temp.key=rand()%(hashtable_size);
-        temp.data=rand();
+        for (int j=0;j<255;j++)
+            ch[j]='a'+rand()%26;
+        //temp.data=ch;
+        strcpy(temp.data,ch);
         it=search(search_key);
         //cout<<"-----------"<<endl;
         if (it==NULL)

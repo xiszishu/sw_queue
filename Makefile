@@ -29,4 +29,4 @@ hashtable:
 #	gcc -O0 -g thread_base.c -o xthread_base -lpthread
 
 clean:
-	$(RM) xvecs_buffer xvecs_base sps hashtable lat_buffer
+	$(RM) xvecs_buffer xvecs_base sps hashtable lat_buffer log_base

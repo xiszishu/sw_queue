@@ -146,24 +146,24 @@ void my_write(void *data, int len, void *location)
 
 void my_write_literal(void *data, int len, void *location)
 {
-  int wIdx, r;
-  long dirty_idx;
+    int wIdx, r;
+    long dirty_idx;
 
-  if (giter==cmtq.end()) my_xfer();
+    if (giter==cmtq.end()) my_xfer();
 
-  std::deque<buffer_t>::iterator it1=giter;
+    std::deque<buffer_t>::iterator it1=giter;
 
-  it1->ele.write_to=location;
-  it1->txid=glob_rt_mem.curtxid;
+    it1->ele.write_to=location;
+    it1->txid=glob_rt_mem.curtxid;
 
-  //temp->ele.data=data;
-  memcpy(it1->ele.data, data, len); // Treat the void pointer as a literal value
+    //temp->ele.data=data;
+    memcpy(it1->ele.data, data, len); // Treat the void pointer as a literal value
 
-  JLI(PValue,PJLArray,location);
-  *PValue= &(*it1);
+    JLI(PValue,PJLArray,location);
+    *PValue= &(*it1);
 
-  it1->ele.len = len;
-  giter++;
+    it1->ele.len = len;
+    giter++;
 }
 
 void *my_read(void *location)

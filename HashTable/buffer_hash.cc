@@ -115,7 +115,7 @@ void buildH()
     for (i=1;i<=hashtable_size;i++)
     {
         hashArray[i-1].key=i-1;
-        hashArray[i-1].data=rand();
+        //hashArray[i-1].data=rand();
         //cout<<i<<endl;
     }
 }
@@ -126,12 +126,13 @@ int main()
     DataItem* it;
     std::ifstream file1;
     file1.open("hashtable.txt");
-    dummyItem.data=-1;
+    //dummyItem.data=-1;
     dummyItem.key=-1;
     file1>>hashtable_size>>ops;
+    file1.close();
     hashArray = (DataItem*) calloc(sizeof(DataItem),hashtable_size);
     //dummyItem = (struct DataItem*) malloc(sizeof(struct DataItem));
-    dummyItem.data = -1;
+    //dummyItem.data = -1;
     dummyItem.key = -1;
 
     buildH();
@@ -141,7 +142,7 @@ int main()
     {
         temp.key=rand()%(hashtable_size);
         temp.data=rand();
-        it=search(search_key);
+        it=search(temp.key);
         //cout<<"-----------"<<endl;
         if (it==NULL)
         {
